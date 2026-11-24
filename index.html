@@ -1,0 +1,688 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Deine Klausuren finden | Voltaireschule</title>
+<!-- Schrift „Manrope“ wie auf voltaireschule.de. Bewusst NICHT von Google Fonts geladen (Datenschutz):
+     Auf der Schulseite eingebunden steht die Schrift über das Website-Theme zur Verfügung, sonst wird Arial verwendet. -->
+<style>
+  :root {
+    --green:#529f3c; --green-dark:#43852f; --text:#191d21; --muted:#4a4e57; --soft:#70787f;
+    --line:#dcdfe2; --cell:#f4f5f6; --footer:#70787f; --footer-dark:#5b636a; --warn:#b45309;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; font:16px/1.6 Manrope, Arial, Helvetica, sans-serif; color:var(--text); background:#fff; }
+  a { color:var(--green); }
+  .wrap { max-width:1200px; margin:0 auto; padding:0 24px; }
+
+  /* Kopf wie auf der Schulseite */
+  header.site { background:#fff; box-shadow:0 2px 12px rgba(0,0,0,.06); position:relative; z-index:2; }
+  header.site .wrap { display:flex; align-items:center; justify-content:space-between; min-height:104px; gap:24px; }
+  header.site img { height:72px; width:auto; display:block; }
+  header.site nav { display:flex; gap:28px; flex-wrap:wrap; }
+  header.site nav a { color:var(--muted); text-decoration:none; font-weight:500; font-size:17px; }
+  header.site nav a:hover { color:var(--green); }
+  .round { width:50px; height:50px; border-radius:50%; background:var(--green); display:inline-flex; align-items:center; justify-content:center; color:#fff; flex:none; }
+
+  .crumbs { font-size:14px; color:var(--soft); margin:36px 0 6px; }
+  .crumbs a { color:var(--soft); text-decoration:none; }
+  h1 { font-size:34px; font-weight:600; margin:0 0 10px; line-height:1.25; }
+  h2 { font-size:24px; font-weight:600; margin:0; }
+  .lead { color:var(--muted); max-width:760px; margin:0 0 28px; }
+
+  .source { display:flex; align-items:center; gap:10px; font-size:14px; color:var(--muted); background:var(--cell); border-left:4px solid var(--green); padding:10px 14px; margin-bottom:24px; }
+  .source.old { border-left-color:var(--soft); }
+  .dot { width:9px; height:9px; border-radius:50%; background:var(--green); flex:none; }
+  .source.old .dot { background:var(--soft); }
+  .source.loading .dot { animation:pulse 1s infinite; }
+  @keyframes pulse { 50% { opacity:.25; } }
+
+  .drop { display:flex; align-items:center; gap:20px; border:2px dashed var(--line); padding:26px 28px; cursor:pointer; transition:border-color .15s, background .15s; }
+  .drop:hover, .drop.over { border-color:var(--green); background:#f7fbf5; }
+  /* Datei-Feld unsichtbar, aber per Tastatur (Tab, Enter/Leertaste) erreichbar */
+  .drop input { position:absolute; width:1px; height:1px; margin:-1px; padding:0; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; opacity:0; }
+  .drop:focus-within { outline:3px solid var(--green); outline-offset:3px; border-color:var(--green); }
+  .drop { position:relative; }
+  .chip:focus-within, button:focus-visible { outline:3px solid var(--green); outline-offset:2px; }
+  .hints-inline { display:none; }
+  .apfs { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:10px; margin-bottom:12px; }
+  .apf { display:flex; flex-direction:column; gap:4px; font-size:13px; color:var(--soft); font-weight:600; }
+  .apf .fixed { font-size:15px; color:var(--text); font-weight:500; padding:8px 10px; background:var(--cell); border:1px solid var(--line); }
+  .apf select { font:500 15px Manrope, Arial, sans-serif; color:var(--text); padding:7px 8px; border:1px solid var(--line); background:#fff; border-radius:0; }
+  .apf select:focus { outline:3px solid var(--green); outline-offset:1px; }
+  p.hint { background:#fff8eb; border-left:4px solid var(--warn); padding:9px 12px; font-size:14px; margin:0 0 16px; }
+  .drop strong { font-size:18px; font-weight:600; display:block; }
+  .drop > div span { color:var(--soft); font-size:14px; }
+  .msg { margin-top:10px; font-size:14px; }
+  .msg.err { color:#c62828; }
+  .msg.ok { color:var(--green-dark); }
+
+  .student { border:1px solid var(--line); margin:28px 0; }
+  .student-head { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:18px 22px; border-bottom:1px solid var(--line); }
+  .student-head .meta { color:var(--soft); font-size:14px; }
+  .student-body { padding:18px 22px 22px; }
+  .label { font-size:13px; font-weight:600; text-transform:uppercase; letter-spacing:.04em; color:var(--soft); margin-bottom:8px; }
+  .courses { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:20px; }
+  .chip { display:inline-flex; align-items:center; gap:7px; border:1px solid var(--line); padding:5px 11px; font-size:14px; cursor:pointer; user-select:none; }
+  .chip input { accent-color:var(--green); margin:0; }
+  .chip.off { color:var(--soft); background:var(--cell); text-decoration:line-through; }
+  .chip small { color:var(--soft); }
+
+  table { width:100%; border-collapse:collapse; font-size:15px; }
+  th { text-align:left; font-weight:600; font-size:13px; text-transform:uppercase; letter-spacing:.04em; color:#fff; background:var(--green); padding:9px 12px; }
+  td { padding:10px 12px; border-bottom:1px solid var(--line); vertical-align:top; }
+  tbody tr:nth-child(even) td { background:var(--cell); }
+  tr.past td { color:var(--soft); text-decoration:line-through; }
+  tr.today td { font-weight:700; }
+  td.date { white-space:nowrap; font-weight:600; }
+  tr.past td.date { font-weight:400; }
+  .tag { display:inline-block; font-size:12px; font-weight:600; padding:1px 8px; margin:1px 4px 1px 0; border:1px solid var(--line); color:var(--soft); white-space:nowrap; text-decoration:none; }
+  .tag.lk { border-color:var(--green); color:var(--green-dark); }
+  .tag.warn { border-color:var(--warn); color:var(--warn); }
+  .notes { margin:14px 0 0; padding-left:18px; font-size:14px; color:var(--muted); }
+
+  .actions { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:18px; }
+  button { font:600 15px Manrope, Arial, sans-serif; border:2px solid var(--green); background:#fff; color:var(--green-dark); padding:9px 18px; cursor:pointer; border-radius:0; }
+  button.primary { background:var(--green); color:#fff; }
+  button:hover { background:var(--green-dark); border-color:var(--green-dark); color:#fff; }
+  button:disabled { opacity:.45; cursor:not-allowed; background:var(--green); }
+  button.link { border:none; background:none; color:var(--soft); padding:6px 0; font-weight:500; }
+  button.link:hover { color:var(--green); background:none; }
+  pre.out { white-space:pre-wrap; background:var(--cell); padding:12px 14px; font:13px/1.5 ui-monospace, Menlo, monospace; margin:10px 0 0; }
+  details summary { cursor:pointer; color:var(--soft); font-size:14px; margin-top:12px; }
+
+  .manual { margin:36px 0 0; border-top:1px solid var(--line); padding-top:18px; }
+  .manual summary { font-weight:600; color:var(--muted); font-size:15px; }
+  .manual ol { color:var(--muted); font-size:14px; }
+  textarea { width:100%; min-height:110px; font:13px/1.4 ui-monospace, Menlo, monospace; border:1px solid var(--line); padding:10px; }
+  .fine { font-size:13px; color:var(--soft); margin:28px 0 56px; }
+
+  footer.site { background:var(--footer); color:#fff; margin-top:40px; }
+  footer.site .cols { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:28px; padding:48px 24px; }
+  footer.site h3 { font-size:24px; font-weight:600; margin:0 0 14px; }
+  footer.site a { color:#fff; text-decoration:none; display:block; margin:5px 0; font-size:17px; }
+  footer.site a.active { text-decoration:underline; text-underline-offset:4px; }
+  footer.site .bottom { background:var(--footer-dark); text-align:center; padding:22px; font-size:15px; }
+  @media (max-width:720px) { header.site nav { display:none; } h1 { font-size:28px; } .drop { flex-direction:column; text-align:center; } th:nth-child(4), td:nth-child(4) { display:none; } .hints-inline { display:block; margin-top:4px; } td, th { padding:8px; } }
+</style>
+</head>
+<body>
+<header class="site">
+  <div class="wrap">
+    <a href="https://www.voltaireschule.de/"><img src="https://www.voltaireschule.de/wp-content/uploads/2025/07/voltaire_logo-e1753894001893-400x154.png" alt="Voltaireschule – Gesamtschulcampus mit gymnasialem Bildungsgang"></a>
+    <nav>
+      <a href="https://www.voltaireschule.de/">Home</a>
+      <a href="https://www.voltaireschule.de/jahrestimer/">Jahrestimer</a>
+      <a href="https://www.voltaireschule.de/jahrgang-11-bis-13-klausuren/">Jg. 11-13: Klausuren</a>
+      <a href="https://moodle.voltaireschule.de">Moodle</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="crumbs"><a href="https://www.voltaireschule.de/">Home</a> › Termine › Deine Klausuren finden</div>
+  <h1>Deine Klausuren finden</h1>
+  <p class="lead">Lade deinen Untis-Stundenplan als PDF hoch und du siehst sofort, wann du welche Klausur schreibst – passend zu deinen Kursen, direkt aus dem Klausurkalender der Jahrgänge 11 bis 13. Der Stundenplan wird nur in deinem Browser gelesen und nirgendwohin hochgeladen.</p>
+
+  <div class="source old loading" id="source" role="status" aria-live="polite"><span class="dot" aria-hidden="true"></span><span id="sourceText">Lade Termine …</span></div>
+
+  <label class="drop" id="drop">
+    <input type="file" id="file" accept="application/pdf" multiple>
+    <span class="round" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M6 10l6-6 6 6M4 20h16"/></svg></span>
+    <div><strong>Stundenplan-PDF hier ablegen</strong><span>oder klicken zum Auswählen · mehrere PDFs auf einmal gehen auch</span></div>
+  </label>
+  <div class="msg" id="loadMsg" role="status" aria-live="polite"></div>
+
+  <div id="results"></div>
+
+  <details class="manual" id="manual">
+    <summary>Termine von Hand aktualisieren</summary>
+    <ol>
+      <li>Öffne <a href="https://www.voltaireschule.de/jahrgang-11-bis-13-klausuren/" target="_blank" rel="noopener">Jahrgang 11-13: Klausuren</a> in der Monatsansicht.</li>
+      <li>Alles markieren (⌘A / Strg+A) und kopieren (⌘C / Strg+C).</li>
+      <li>Hier einfügen und „Übernehmen“ klicken – für jeden Monat einzeln.</li>
+    </ol>
+    <textarea id="paste" placeholder="Kopierten Kalender hier einfügen …"></textarea>
+    <div class="actions">
+      <button class="primary" id="applyPaste">Übernehmen</button>
+      <button class="link" id="resetData">Eigene Änderungen verwerfen</button>
+    </div>
+    <div class="msg" id="pasteMsg"></div>
+  </details>
+
+  <p class="fine">Ohne Gewähr – maßgeblich ist der Klausurkalender der Schule. Im Kalender bedeutet ein großgeschriebenes Fach (z. B. MA-CKa**) Leistungskurs, ein kleingeschriebenes (ma-Alt) Grundkurs. Beim Seminarkurs gibt es in der Regel keine Klausur.</p>
+</main>
+
+<footer class="site">
+  <div class="wrap cols">
+    <div><h3>Termine</h3>
+      <a href="https://www.voltaireschule.de/jahrestimer/">Jahrestimer</a>
+      <a href="https://www.voltaireschule.de/jahrgang-5-bis-10-arbeiten/">Jahrgang 5 bis 10: Arbeiten</a>
+      <a href="https://www.voltaireschule.de/jahrgang-10-13-pruefungen/">Jahrgang 10/13: Prüfungen</a>
+      <a href="https://www.voltaireschule.de/jahrgang-11-bis-13-klausuren/">Jahrgang 11-13: Klausuren</a>
+      <a class="active" href="#">Deine Klausuren finden</a>
+    </div>
+    <div><h3>E-Learning</h3><a href="https://moodle.voltaireschule.de">Moodle</a></div>
+  </div>
+  <div class="bottom">© 2026 Voltaireschule Potsdam – Gesamtschulcampus mit gymnasialem Bildungsgang</div>
+</footer>
+
+<script type="module">
+/* ======================================================================
+   EINSTELLUNGEN – für die Schul-Website
+   ----------------------------------------------------------------------
+   Woher kommen die Termine? Die Seite probiert der Reihe nach:
+   1. ICS_URLS: direkte Adresse(n) der Kalenderdatei des Klausurkalenders.
+      Die Adresse steht in den Einstellungen des Kalender-Plugins
+      (ICS Calendar Pro). Funktioniert, wenn die Datei auf demselben Server
+      liegt oder der Server den Abruf erlaubt (CORS).
+   2. Liegt diese Seite auf voltaireschule.de, liest sie den Klausurkalender
+      (CALENDAR_PAGE) automatisch im Hintergrund aus – ohne jede Einrichtung.
+   3. Sonst: eingebaute Termine bzw. von Hand eingefügte.
+   ====================================================================== */
+const CONFIG = {
+  ICS_URLS: [],
+  CALENDAR_PAGE: '/jahrgang-11-bis-13-klausuren/',
+  SCHOOL_HOST: 'voltaireschule.de',
+  MONTHS_AHEAD: 3,            // aktueller Monat + so viele folgende
+  SCRAPE_TIMEOUT_MS: 20000,   // so lange wird pro Monat höchstens auf den Kalender gewartet
+  CACHE_MINUTES: 0,           // 0 = nichts im Browser speichern (datensparsam); z. B. 60 = Termine 1 Std. zwischenspeichern
+  PDFJS_BASE: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/', // kann auch selbst gehostet werden
+};
+
+// ---------- Eingebaute Termine (Stand 16.11.2026) ----------
+const BUILTIN_STAND = '16.11.2026';
+const BUILTIN = [
+  ['2026-11-13','8:15','9:45',11,'bio-Ros / bio-Tos / che-Wie / phy-Len'],
+  ['2026-11-13','14:05','15:35',12,'spo-Bal* [g1] / spo-JSm* / spo-Gru*'],
+  ['2026-11-16','10:10','11:40',12,'la-CRs / muk-PLa / pb-Swa / psy-Lep / wiwi-Bei / inf-Jen'],
+  ['2026-11-16','14:05','15:35',11,'DE-Har'],
+  ['2026-11-18','8:15','9:45',11,'ds-MKn* / ds-Hof* / ku-Ler / ku-CHr / mus-Wac*'],
+  ['2026-11-18','8:15','9:45',12,'spo-JPi* / spo-JPa* / spo-Bal* [g6]'],
+  ['2026-11-20','12:30','14:00',12,'ma-Alt / ma-RSp / ma-SGr / ma-FGr [?] / ma-Bie'],
+  ['2026-11-23','8:15','9:45',12,'ds-Wac*'],
+  ['2026-11-23','8:15','9:45',12,'en-JBe / en-Ber / en-Soe'],
+  ['2026-11-23','10:10','11:40',11,'ds-PFa* / en-Jau / en-Eng'],
+  ['2026-11-24','9:00','14:15',13,'Klausur unter Abiturbedingungen APF1 DE-MKn [315 min, zzgl. NTA]'],
+  ['2026-11-24','9:00','14:00',13,'Klausur unter Abiturbedingungen APF1 BIO-Wie [300 min, zzgl. NTA]'],
+  ['2026-11-24','9:00','13:45',13,'Klausur unter Abiturbedingungen APF1 EN-Bue / EN-Fri [285 min, zzgl. NTA]'],
+  ['2026-11-24','9:00','13:30',13,'Klausur unter Abiturbedingungen APF1 GE-Har / GE-Swe [270 min, zzgl. NTA]'],
+  ['2026-11-24','9:00','13:30',13,'Klausur unter Abiturbedingungen APF1 INF-Jen [270 min, zzgl. NTA]'],
+  ['2026-11-25','12:30','14:00',11,'de-Sie / de-Kni / de-Hof'],
+  ['2026-11-25','12:30','14:00',12,'bio-Tos / bio-Mau / bio-May / che-Wie / phy-Len / phy-Fei'],
+  ['2026-11-26','8:30','10:45',13,'Klausur unter Abiturbedingungen APF4 [135 min, zzgl. NTA]'],
+  ['2026-11-27','8:15','11:15',12,'DE-Hoe** / FRZ-Lig** [180 min; nach Abgabe max. 25 min Pause]'],
+  ['2026-11-27','8:15','10:45',12,'EK-JPa** [150 min; nach Abgabe max. 25 min Pause]'],
+  ['2026-11-27','8:15','10:30',12,'EN-JBe** / EN-Jau** / GE-Swe** / GE-Har** / MA-CKa** [135 min; nach Abgabe max. 25 min Pause]'],
+  ['2026-11-27','12:30','14:00',11,'ma-Jen / ma-FGr / ma-Sur'],
+  ['2026-11-30','8:15','9:45',11,'frz-Far / spa-Szu / spa-Ten / la-CRs / muk-Rad / pb-Haf / psy-Lep'],
+  ['2026-11-30','9:00','13:45',13,'Klausur unter Abiturbedingungen APF3 ma [285 min, zzgl. NTA]'],
+  ['2026-11-30','9:00','13:15',13,'Klausur unter Abiturbedingungen APF3 NAWI (bio, phy) / de / en / frz [255 min, zzgl. NTA]'],
+  ['2026-11-30','9:00','12:30',13,'Klausur unter Abiturbedingungen APF3 GEWI (ek, ge, his, pb, wiwi, ecm) / ku / spa [210 min, zzgl. NTA]'],
+  ['2026-12-01','12:30','15:30',12,'DE-Sie** [180 min; nach Abgabe max. 25 min Pause]'],
+  ['2026-12-01','12:30','15:00',12,'EK-Lie** [150 min; nach Abgabe max. 25 min Pause]'],
+  ['2026-12-01','12:30','14:45',12,'EN-JSm** / EN-Soe** / KU-Zur** / MA-Alt** / Bio-Ros** [135 min; nach Abgabe max. 25 min Pause]'],
+  ['2026-12-03','9:00','14:30',13,'Klausur unter Abiturbedingungen APF2 MA-CKa [330 min, zzgl. NTA]'],
+  ['2026-12-03','9:00','14:15',13,'Klausur unter Abiturbedingungen APF2 DE-NSi [315 min, zzgl. NTA]'],
+  ['2026-12-03','9:00','13:45',13,'Klausur unter Abiturbedingungen APF2 EN-Pre / EN-JSm / FRZ-Hal [285 min, zzgl. NTA]'],
+  ['2026-12-03','9:00','13:30',13,'Klausur unter Abiturbedingungen APF2 EK-Bei / KU-Ler [270 min, zzgl. NTA]'],
+  ['2026-12-04','10:10','11:40',11,'GE-CRs'],
+  ['2026-12-04','10:10','11:40',11,'BIO-Smo / DE-Kni / EN-Pre / KU-Ler'],
+  ['2026-12-07','9:00','14:30',13,'Klausur unter Abiturbedingungen APF2 MA-CKa [330 min, zzgl. NTA]'],
+  ['2026-12-07','12:30','14:00',11,'EK-Swe / EN-Soe / EN-Ber / MA-Fei'],
+  ['2026-12-07','12:30','14:00',12,'ds-Hof* / ds-Zur* / ku-Sae / ku-Ler / mus-RSp*'],
+  ['2026-12-10','8:15','9:45',12,'de-Kni / de-PFa / de-Har / de-Sie'],
+  ['2026-12-10','12:30','14:00',11,'ek-May / muk-Kni / pb-Gru / phi-Rad / psy-Gor / wiwi-Bei / inf-Jen'],
+  ['2026-12-15','8:15','9:45',12,'ge-JBe / his-Hue'],
+  ['2026-12-15','8:15','9:45',12,'ge-Lig / ge-Swe / ge-CRs'],
+  ['2026-12-15','12:30','14:00',11,'spo-Bal* / spo-Bue* [g2] / spo-SMo*'],
+  ['2026-12-17','8:15','9:45',11,'ge-Sae / ge-Spe / ge-Lig'],
+  ['2026-12-17','8:15','9:45',11,'spo-Bue* [g4] / spo-JPa* / spo-Gru*'],
+  ['2026-12-17','12:30','14:00',12,'ecm-Haf / frz-Ken / spa-Szu / phi-Rad / ek-May / psy-Gor / muk-Kni / pb-Gru'],
+].map(([date,start,end,jg,text]) => ({date,start,end,jg,text}));
+
+const SUBJECTS = {
+  ma:'Mathe', en:'Englisch', de:'Deutsch', ge:'Geschichte', his:'Geschichte (bilingual)', inf:'Informatik',
+  phy:'Physik', che:'Chemie', bio:'Biologie', psy:'Psychologie', ku:'Kunst', mus:'Musik', ds:'Darstellendes Spiel',
+  spo:'Sport', wiwi:'Wiwi', pb:'Politische Bildung', phi:'Philosophie', ek:'Erdkunde', frz:'Französisch',
+  spa:'Spanisch', la:'Latein', sk:'Seminarkurs', muk:'muk', ecm:'ecm', ler:'LER',
+};
+const WD = ['So','Mo','Di','Mi','Do','Fr','Sa'];
+// „Jg. 12: …“ oder „Jg. 11-12: …“ (Klausureinträge haben immer einen Doppelpunkt)
+const JG_RE = /^Jg\.\s*(\d{1,2})(?:\s*[-–]\s*(\d{1,2}))?:\s*(.+)$/;
+const MANUAL_KEY = 'klausurFinder.manual.v1';
+const CACHE_KEY = 'klausurFinder.live.v1';
+
+// ---------- Hilfsfunktionen ----------
+const pad2 = n => String(n).padStart(2,'0');
+const isoOf = (y,m,d) => `${y}-${pad2(m+1)}-${pad2(d)}`;
+const todayISO = () => { const d = new Date(); return isoOf(d.getFullYear(), d.getMonth(), d.getDate()); };
+const nowDE = () => { const d = new Date(); return `${pad2(d.getDate())}.${pad2(d.getMonth()+1)}.${d.getFullYear()}, ${pad2(d.getHours())}:${pad2(d.getMinutes())} Uhr`; };
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const dedupe = evs => { const seen = new Set(); return evs.filter(e => { const k = [e.date,e.start,e.jg,e.text].join('|'); if (seen.has(k)) return false; seen.add(k); return true; }); };
+
+// ---------- Kalender-Text (Monatsansicht) lesen ----------
+function parseCalendarText(text) {
+  const MON = ['januar','februar','märz','april','mai','juni','juli','august','september','oktober','november','dezember'];
+  const lines = text.split(/\r?\n/).map(s => s.replace(/\t/g,' ').trim()).filter(Boolean);
+  let hy=null, hm=null, seen=false, last=0, cy=0, cm=0, day=null, time=null, minD=null, maxD=null;
+  const out = [];
+  for (let l of lines) {
+    const mh = l.match(/^(Januar|Februar|März|April|Mai|Juni|Juli|August|September|Oktober|November|Dezember)\s+(\d{4})$/i);
+    if (mh) { hy=+mh[2]; hm=MON.indexOf(mh[1].toLowerCase()); seen=false; last=0; day=null; continue; }
+    if (hm === null) continue;
+    if (/^\d{1,2}$/.test(l)) {
+      const d = +l;
+      if (!seen) {
+        if (d === 1) { seen=true; cy=hy; cm=hm; day={y:cy,m:cm,d}; }
+        else if (d >= 20) { let pm=hm-1, py=hy; if (pm<0) { pm=11; py--; } day={y:py,m:pm,d}; }
+        else day={y:hy,m:hm,d};
+      } else {
+        if (d < last) { cm++; if (cm>11) { cm=0; cy++; } }
+        day={y:cy,m:cm,d};
+      }
+      last=d; time=null;
+      const s = isoOf(day.y, day.m, day.d); if (!minD || s<minD) minD=s; if (!maxD || s>maxD) maxD=s;
+      continue;
+    }
+    const tm = l.match(/^(\d{1,2}:\d{2})(?:\s*[-–]\s*(\d{1,2}:\d{2}))?$/);
+    if (tm) { time={start:tm[1], end:tm[2]||null}; continue; }
+    const tl = l.match(/^(\d{1,2}:\d{2})\s*[-–]\s*(\d{1,2}:\d{2})\s+(Jg\..*)$/);   // „8:15 - 9:45 Jg. 12: …“ in einer Zeile
+    if (tl) { time={start:tl[1], end:tl[2]}; l = tl[3]; }
+    const ev = l.match(JG_RE);
+    if (ev && day) out.push({ date:isoOf(day.y,day.m,day.d), start:time?time.start:null, end:time?time.end:null, jg:+ev[1], ...(ev[2] ? { jgTo:+ev[2] } : {}), text:ev[3] });
+  }
+  return { events: out, from: minD, to: maxD };
+}
+
+// ---------- ICS-Datei lesen ----------
+function parseICS(ics) {
+  const lines = ics.replace(/\r?\n[ \t]/g, '').split(/\r?\n/);
+  const out = []; let cur = null;
+  const unesc = s => s.replace(/\\n/gi, ' ').replace(/\\([,;\\])/g, '$1');
+  const berlin = new Intl.DateTimeFormat('de-DE', { timeZone:'Europe/Berlin', year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', hourCycle:'h23' });
+  const when = (params, val) => {
+    if (/VALUE=DATE(?!-)/.test(params) || /^\d{8}$/.test(val)) return { date:`${val.slice(0,4)}-${val.slice(4,6)}-${val.slice(6,8)}`, time:null };
+    const m = val.match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})/);
+    if (!m) return null;
+    if (val.endsWith('Z')) {
+      const p = Object.fromEntries(berlin.formatToParts(new Date(Date.UTC(+m[1], +m[2]-1, +m[3], +m[4], +m[5]))).map(x => [x.type, x.value]));
+      return { date:`${p.year}-${p.month}-${p.day}`, time:`${+p.hour}:${p.minute}` };
+    }
+    return { date:`${m[1]}-${m[2]}-${m[3]}`, time:`${+m[4]}:${m[5]}` };   // lokale Zeit bzw. TZID=Europe/Berlin
+  };
+  // 1. Alle VEVENTs einsammeln
+  const vevents = [];
+  for (const line of lines) {
+    if (line === 'BEGIN:VEVENT') { cur = { exdates: [] }; continue; }
+    if (line === 'END:VEVENT') { if (cur) vevents.push(cur); cur = null; continue; }
+    if (!cur) continue;
+    const i = line.indexOf(':'); if (i < 0) continue;
+    const [name, ...params] = line.slice(0, i).split(';'); const val = line.slice(i+1); const p = params.join(';');
+    if (name === 'SUMMARY') cur.summary = unesc(val).trim();
+    else if (name === 'UID') cur.uid = val.trim();
+    else if (name === 'STATUS') cur.status = val.trim().toUpperCase();
+    else if (name === 'DTSTART') cur.start = when(p, val);
+    else if (name === 'DTEND') cur.end = when(p, val);
+    else if (name === 'RRULE') cur.rrule = Object.fromEntries(val.split(';').map(kv => kv.split('=')));
+    else if (name === 'EXDATE') val.split(',').forEach(v => { const w = when(p, v.trim()); if (w) cur.exdates.push(w.date); });
+    else if (name === 'RECURRENCE-ID') cur.recurrenceId = when(p, val);
+  }
+  // 2. Geänderte/abgesagte Einzeltermine einer Serie merken
+  const overridden = new Set(vevents.filter(v => v.uid && v.recurrenceId).map(v => `${v.uid}|${v.recurrenceId.date}`));
+  const addDays = (iso, n) => { const d = new Date(iso + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0,10); };
+  // 3. Termine erzeugen (abgesagte weglassen, einfache Wiederholungen auflösen)
+  for (const v of vevents) {
+    if (!v.summary || !v.start || v.status === 'CANCELLED') continue;
+    const m = v.summary.match(JG_RE); if (!m) continue;
+    let dates = [v.start.date];
+    if (v.rrule && !v.recurrenceId && /^(DAILY|WEEKLY)$/.test(v.rrule.FREQ)) {
+      const step = (v.rrule.FREQ === 'WEEKLY' ? 7 : 1) * (+v.rrule.INTERVAL || 1);
+      const count = +v.rrule.COUNT || Infinity;
+      const until = v.rrule.UNTIL ? `${v.rrule.UNTIL.slice(0,4)}-${v.rrule.UNTIL.slice(4,6)}-${v.rrule.UNTIL.slice(6,8)}` : addDays(v.start.date, 366);
+      dates = [];
+      for (let d = v.start.date, n = 0; d <= until && n < count && n < 200; d = addDays(d, step), n++) dates.push(d);
+    }
+    for (const d of dates) {
+      if (v.exdates.includes(d)) continue;
+      if (!v.recurrenceId && v.uid && overridden.has(`${v.uid}|${d}`)) continue;
+      out.push({ date:d, start:v.start.time, end:v.end ? v.end.time : null, jg:+m[1], ...(m[2] ? { jgTo:+m[2] } : {}), text:m[3] });
+    }
+  }
+  return out;
+}
+
+// ---------- Live-Daten ----------
+function monthsToLoad() {
+  const d = new Date(); const res = [];
+  for (let i = 0; i <= CONFIG.MONTHS_AHEAD; i++) { const x = new Date(d.getFullYear(), d.getMonth()+i, 1); res.push(`${x.getFullYear()}${pad2(x.getMonth()+1)}01`); }
+  return res;
+}
+// Öffnet den Klausurkalender der Schule unsichtbar und liest einen Monat aus (nur auf derselben Domain möglich).
+// „Fertig“ heißt: Das Plugin hat den Kalender eingesetzt (Monatsname + Tageszahlen sichtbar)
+// und der Inhalt bleibt STABLE_MS lang unverändert. Außerdem muss der richtige Monat angezeigt werden.
+function scrapeMonth(ymd) {
+  const STABLE_MS = 600, POLL_MS = 250;
+  const want = `${ymd.slice(0,4)}-${ymd.slice(4,6)}-01`;
+  return new Promise((resolve, reject) => {
+    const f = document.createElement('iframe');
+    f.setAttribute('aria-hidden','true'); f.tabIndex = -1;
+    f.style.cssText = 'position:absolute;left:-10000px;top:0;width:1200px;height:900px;border:0';
+    f.src = `${CONFIG.CALENDAR_PAGE}?r34icsymd=${ymd}`;
+    const t0 = Date.now(); let prev = null, since = 0;
+    const done = (fn, v) => { f.remove(); fn(v); };
+    const tick = () => {
+      let txt = '';
+      try { const c = f.contentDocument && f.contentDocument.querySelector('.ics-calendar'); txt = c ? c.innerText : ''; }
+      catch (e) { return done(reject, e); }
+      const ready = /(Januar|Februar|März|April|Mai|Juni|Juli|August|September|Oktober|November|Dezember)\s+\d{4}/.test(txt) && /\n\s*\d{1,2}\s*\n/.test(txt);
+      if (ready && txt === prev) {
+        if (Date.now() - since >= STABLE_MS) {
+          const r = parseCalendarText(txt);
+          if (!r.from || r.from > want || r.to < want) return done(reject, new Error(`falscher Monat angezeigt (${ymd})`));
+          return done(resolve, r);
+        }
+      } else { prev = txt; since = Date.now(); }
+      if (Date.now() - t0 > CONFIG.SCRAPE_TIMEOUT_MS) return done(reject, new Error(`Zeitüberschreitung (${ymd})`));
+      setTimeout(tick, POLL_MS);
+    };
+    f.onload = () => setTimeout(tick, POLL_MS);
+    document.body.appendChild(f);
+  });
+}
+// Ersetzt in `base` alle Termine der ausgelesenen Zeiträume durch die frisch ausgelesenen.
+function mergeRanges(base, parts) {
+  const kept = base.filter(e => !parts.some(p => e.date >= p.from && e.date <= p.to));
+  return dedupe([...kept, ...parts.flatMap(p => p.events)]).sort((a,b) => a.date.localeCompare(b.date));
+}
+const onSchoolSite = () => location.hostname === CONFIG.SCHOOL_HOST || location.hostname.endsWith('.' + CONFIG.SCHOOL_HOST);
+// Liefert {events, how, partial, failed}. onProgress(events, fertig, gesamt) wird nach jedem Monat aufgerufen.
+async function loadLive(base, onProgress) {
+  if (CONFIG.CACHE_MINUTES > 0) {
+    try { const c = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
+      if (c && Date.now() - c.ts < CONFIG.CACHE_MINUTES*60000) return c; } catch {}
+  } else { try { localStorage.removeItem(CACHE_KEY); } catch {} }
+  let res = null;
+  if (CONFIG.ICS_URLS.length) {
+    try {
+      const all = await Promise.all(CONFIG.ICS_URLS.map(u => fetch(u, { cache:'no-store' }).then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.text(); })));
+      res = { events: dedupe(all.flatMap(parseICS)), how: 'Kalenderdatei', partial: false };
+    } catch (e) { console.warn('Kalenderdatei nicht abrufbar:', e); }
+  }
+  if (!res && onSchoolSite()) {
+    const months = monthsToLoad(); const parts = []; let failed = 0;
+    await Promise.all(months.map(m => scrapeMonth(m)
+      .then(p => { parts.push(p); onProgress && onProgress(mergeRanges(base, parts), parts.length + failed, months.length); })
+      .catch(e => { failed++; console.warn('Kalendermonat nicht auslesbar:', e); })));
+    if (parts.length) res = { events: mergeRanges(base, parts), how: 'Klausurkalender', partial: failed > 0, loaded: parts.length, total: months.length };
+    else return { failed: true };
+  }
+  if (!res) return CONFIG.ICS_URLS.length || onSchoolSite() ? { failed: true } : null;
+  res = { ...res, ts: Date.now(), stand: nowDE() };
+  if (CONFIG.CACHE_MINUTES > 0 && !res.partial) { try { localStorage.setItem(CACHE_KEY, JSON.stringify(res)); } catch {} }
+  return res;
+}
+
+// ---------- Datenquelle festlegen ----------
+let DATA = { events: BUILTIN, stand: BUILTIN_STAND, kind: 'builtin' };
+function manualData() { try { const s = JSON.parse(localStorage.getItem(MANUAL_KEY) || 'null'); if (s && Array.isArray(s.events)) return s; } catch {} return null; }
+function setSource(state, text) {
+  const el = document.getElementById('source');
+  el.className = 'source' + (state === 'live' ? '' : ' old') + (state === 'loading' ? ' loading' : '');
+  document.getElementById('sourceText').textContent = text;
+}
+const fallbackText = (kind, stand) => kind === 'manual' ? `von Hand aktualisierte Termine (${stand})` : `eingebaute Termine, Stand ${stand}`;
+function describeSource() {
+  if (DATA.kind === 'live') setSource('live', `Termine live aus dem ${DATA.how} der Schule · aktualisiert ${DATA.stand}`);
+  else if (DATA.kind === 'partial') setSource('live', `Termine live aus dem ${DATA.how} (${DATA.loaded} von ${DATA.total} Monaten) · für den Rest ${fallbackText(DATA.fallbackKind, DATA.fallbackStand)} · aktualisiert ${DATA.stand}`);
+  else if (DATA.liveFailed) setSource('old', `Der Klausurkalender konnte gerade nicht geladen werden – angezeigt werden ${fallbackText(DATA.kind, DATA.stand)}. Bitte später neu laden.`);
+  else if (DATA.kind === 'manual') setSource('old', `Termine von Hand aktualisiert am ${DATA.stand}`);
+  else setSource('old', `Eingebaute Termine, Stand ${DATA.stand} – auf voltaireschule.de aktualisiert sich diese Seite automatisch`);
+  document.getElementById('manual').style.display = (DATA.kind === 'live' || DATA.kind === 'partial') ? 'none' : '';
+}
+async function initData() {
+  const m = manualData(); if (m) DATA = { ...m, kind:'manual' };
+  const base = DATA.events;
+  if (CONFIG.ICS_URLS.length || onSchoolSite()) setSource('loading', 'Lade aktuelle Termine aus dem Klausurkalender …');
+  else { describeSource(); return; }
+  const live = await loadLive(base, (events, n, total) => {
+    DATA = { ...DATA, events };
+    setSource('loading', `Lade aktuelle Termine aus dem Klausurkalender … (${n} von ${total} Monaten)`);
+    render();
+  });
+  if (live && !live.failed) DATA = { events: live.events, stand: live.stand, how: live.how, kind: live.partial ? 'partial' : 'live', loaded: live.loaded, total: live.total,
+    fallbackKind: m ? 'manual' : 'builtin', fallbackStand: m ? m.stand : BUILTIN_STAND };
+  else if (live && live.failed) DATA = { ...DATA, events: base, liveFailed: true };
+  describeSource(); render();
+}
+
+// ---------- Stundenplan-PDF lesen ----------
+let pdfjs = null;
+async function getPdfjs() {
+  if (pdfjs) return pdfjs;
+  pdfjs = await import(CONFIG.PDFJS_BASE + 'pdf.min.mjs');
+  pdfjs.GlobalWorkerOptions.workerSrc = CONFIG.PDFJS_BASE + 'pdf.worker.min.mjs';
+  return pdfjs;
+}
+async function pdfToText(buf) {
+  const lib = await getPdfjs();
+  const doc = await lib.getDocument({ data: buf }).promise;
+  const parts = [];
+  for (let p = 1; p <= doc.numPages; p++) parts.push((await (await doc.getPage(p)).getTextContent()).items.map(i => i.str).join(' '));
+  return parts.join(' ').replace(/\s+/g, ' ');
+}
+function parseTimetable(text) {
+  // Kopfzeile „Nachname Vorname(n) Jahrgang Tutor Montag …“ – \p{L} erlaubt auch é, ç, ł usw.
+  const PART = "(?:von|vom|van|zu|zur|de|der|den|di|da|du|del|la|le|ten|ter|al|el|bin|ibn) ";
+  const NAME = `(?:${PART})*\\p{Lu}[\\p{L}'\\-]+`;
+  const head = text.match(new RegExp(`(${NAME}(?: ${NAME})+) (1[0-3]) ([A-Z][A-Za-z]{1,3}) Montag`, 'u'));
+  const courses = new Map();
+  const re = /\.(\*?)([A-Za-z]{2,5}) ([Ll]\d+|g\d+|\d+) ([A-Z][A-Za-z]{1,3})\b/g;
+  let m;
+  while ((m = re.exec(text))) {
+    const c = { subj:m[2], level:m[3], teacher:m[4], isLK:/^l/i.test(m[3]) };
+    if (!courses.has(courseKey(c))) courses.set(courseKey(c), c);
+  }
+  let name = null, first = null, jg = null, tutor = null;
+  if (head) {
+    // Untis: „Nachname Vorname(n)“; ein Nachname kann mit „von“, „de“ … beginnen
+    const p = head[1].split(' '); let i = 0;
+    while (i < p.length - 1 && new RegExp(`^${PART.trim()}$`).test(p[i])) i++;
+    const last = p.slice(0, i + 1).join(' '), given = p.slice(i + 1);
+    first = given[0] || last; name = given.length ? `${given.join(' ')} ${last}` : last; jg = +head[2]; tutor = head[3];
+  }
+  return { name, first, jg, tutor, courses: [...courses.values()] };
+}
+
+// ---------- Abgleich ----------
+function tokensOf(text) {
+  const note = (text.match(/\[(\d+ min)[^\]]*\]/) || [])[1] || null;
+  const toks = []; const re = /([A-Za-zÄÖÜäöü]{2,5})-([A-Z][A-Za-z]{1,3})(\**)(?:\s*\[(g\d+|\?)\])?/g; let m;
+  while ((m = re.exec(text))) toks.push({ subj:m[1], teacher:m[2], isLK:/^[A-ZÄÖÜ]/.test(m[1]), group:m[4]||null });
+  return { toks, note };
+}
+const courseKey = c => `${c.subj.toLowerCase()}|${c.level.toLowerCase()}|${c.teacher}`;
+const subjName = c => (SUBJECTS[c.subj.toLowerCase()] || c.subj) + (c.isLK ? ' LK' : '');
+const tpad = t => t ? t.padStart(5,'0') : '00:00';
+const inJg = (e, jg) => !jg || (jg >= e.jg && jg <= (e.jgTo || e.jg));
+const apfOf = text => { const m = text.match(/\bAPF\s*([1-4])\b/); return m ? +m[1] : null; };
+// Fächer aus Abitur-Einträgen ohne Lehrkraft, z. B. „APF3 NAWI (bio, phy) / de / en / frz [255 min]“ → bio, phy, de, en, frz
+const apfSubjects = text => (text.replace(/\[[^\]]*\]/g, '').split(/\bAPF\s*\d\b/)[1] || '').match(/\b[a-z]{2,5}\b/g) || [];
+// Name, der in Tabelle/Text/Kalender erscheint
+const examName = x => x.course.placeholder ? `${x.apf}. Prüfungsfach` : subjName(x.course);
+const examWho = x => x.course.teacher ? ` (${x.course.teacher})` : '';
+// apf = { 3: courseKey|null, 4: courseKey|null } – nur für Jahrgang 13
+function findExams(tt, selected, apf = {}) {
+  const res = [];
+  for (const e of DATA.events) {
+    if (!inJg(e, tt.jg)) continue;
+    const { toks, note } = tokensOf(e.text);
+    const n = apfOf(e.text);
+    if (n && !toks.length) {                       // Abitur-Klausur nur nach Prüfungsfach, ohne Lehrkraft
+      const subjects = apfSubjects(e.text);
+      const c = apf[n] ? tt.courses.find(k => courseKey(k) === apf[n]) : null;
+      if (c) { if (selected.has(courseKey(c)) && (!subjects.length || subjects.includes(c.subj.toLowerCase()))) res.push({ ...e, course:c, note, apf:n }); }
+      else if (!subjects.length) res.push({ ...e, course:{ subj:`APF${n}`, level:'', teacher:'', isLK:false, placeholder:true }, note, apf:n });
+      continue;
+    }
+    for (const c of tt.courses) {
+      if (!selected.has(courseKey(c))) continue;
+      const hit = toks.find(t => t.subj.toLowerCase() === c.subj.toLowerCase() && t.teacher === c.teacher && t.isLK === c.isLK
+        && (!t.group || t.group === '?' || t.group === c.level.toLowerCase()));
+      if (hit) res.push({ ...e, course:c, note, unsure: hit.group === '?', apf:n });
+    }
+  }
+  return res.sort((a,b) => (a.date+tpad(a.start)).localeCompare(b.date+tpad(b.start)));
+}
+// Abitur-Termine, die erst nach Wahl des 3./4. Prüfungsfachs zugeordnet werden können
+function pendingApf(tt, apf) {
+  return DATA.events.filter(e => inJg(e, tt.jg) && apfOf(e.text) && !apf[apfOf(e.text)] && !tokensOf(e.text).toks.length && apfSubjects(e.text).length);
+}
+// Zeitliche Überschneidung am selben Tag (ohne Endzeit: 90 Minuten angenommen)
+const toMin = t => { const [h,m] = t.split(':').map(Number); return h*60 + m; };
+const span = x => { const a = x.start ? toMin(x.start) : 0; return [a, x.end ? toMin(x.end) : x.start ? a + 90 : 24*60]; };
+const clashes = (x, all) => all.some(y => y !== x && y.date === x.date && (([a1,b1],[a2,b2]) => a1 < b2 && a2 < b1)(span(x), span(y)));
+const sameCourseCount = (x, all) => all.filter(y => !y.course.placeholder && courseKey(y.course) === courseKey(x.course) && (y.apf || 0) === (x.apf || 0)).length;
+const fmtDate = iso => { const [y,m,d] = iso.split('-').map(Number); return `${WD[new Date(y,m-1,d).getDay()]} ${pad2(d)}.${pad2(m)}.`; };
+const fmtTime = (s,e) => s ? `${tpad(s)}–${e ? tpad(e) : '?'}` : 'ganztägig';
+
+// ---------- Ausgabe ----------
+const students = [];
+function render() {
+  const root = document.getElementById('results'); root.innerHTML = '';
+  const today = todayISO();
+  for (const s of students) {
+    const exams = findExams(s.tt, s.selected, s.apf);
+    const has = new Set(exams.map(x => courseKey(x.course)));
+    const missing = s.tt.courses.filter(c => s.selected.has(courseKey(c)) && !has.has(courseKey(c)));
+    const abi = s.tt.jg === 13;
+    const pending = abi ? pendingApf(s.tt, s.apf) : [];
+    const lks = s.tt.courses.filter(c => c.isLK).sort((a,b) => a.level.localeCompare(b.level));
+    const gks = s.tt.courses.filter(c => !c.isLK && c.subj.toLowerCase() !== 'sk');
+    const apfSelect = n => `<label class="apf">${n}. Prüfungsfach
+        <select data-apf="${n}"><option value="">– bitte wählen –</option>${gks.map(c => `<option value="${esc(courseKey(c))}" ${s.apf[n]===courseKey(c)?'selected':''}>${esc(subjName(c))} (${esc(c.teacher)})</option>`).join('')}</select></label>`;
+    const abiBlock = abi ? `
+        <div class="label">Deine Prüfungsfächer (Abitur)</div>
+        <div class="apfs">
+          ${lks.map((c,i) => `<div class="apf">${i+1}. Prüfungsfach<div class="fixed">${esc(subjName(c))} (${esc(c.teacher)})</div></div>`).join('')}
+          ${apfSelect(3)}${apfSelect(4)}
+        </div>
+        ${pending.length ? `<p class="hint">Wähle dein 3. und 4. Prüfungsfach – dann erscheinen auch die Abitur-Klausuren dafür (${[...new Set(pending.map(e => fmtDate(e.date)))].join(', ')}).</p>` : ''}` : '';
+    const el = document.createElement('section'); el.className = 'student';
+    el.innerHTML = `
+      <div class="student-head">
+        <div><h2>${esc(s.tt.name || 'Unbekannt')}</h2><div class="meta">${s.tt.jg ? `Jahrgang ${s.tt.jg}` : ''}${s.tt.tutor ? ` · Tutor/in ${esc(s.tt.tutor)}` : ''} · ${exams.length} Klausuren</div></div>
+        <button class="link" data-act="remove">Entfernen ✕</button>
+      </div>
+      <div class="student-body">
+        <div class="label">Deine Kurse – antippen, um abgewählte auszublenden</div>
+        <div class="courses">${s.tt.courses.map(c => { const on = s.selected.has(courseKey(c)); return `<label class="chip${on?'':' off'}"><input type="checkbox" data-key="${esc(courseKey(c))}" ${on?'checked':''}>${esc(subjName(c))} <small>${esc(c.teacher)}</small></label>`; }).join('')}</div>
+        ${abiBlock}
+        ${exams.length ? `<table><thead><tr><th>Datum</th><th>Zeit</th><th>Fach</th><th>Hinweis</th></tr></thead><tbody>
+          ${exams.map(x => { const clash = clashes(x, exams), multi = !x.course.placeholder && sameCourseCount(x, exams) > 1;
+            const hints = `${x.apf?`<span class="tag lk">Abitur · APF${x.apf}</span>`:x.course.isLK?'<span class="tag lk">LK</span>':''}${x.note?`<span class="tag">${esc(x.note)}</span>`:''}${x.course.placeholder?'<span class="tag warn">Fach oben wählen</span>':''}${x.unsure?'<span class="tag warn">im Kalender mit [?]</span>':''}${clash?'<span class="tag warn">Überschneidung</span>':''}${multi?'<span class="tag warn">mehrere Termine – bitte nachfragen</span>':''}${x.date<today?'<span class="tag">vorbei</span>':x.date===today?'<span class="tag warn">heute</span>':''}`;
+            return `<tr class="${x.date<today?'past':x.date===today?'today':''}"><td class="date">${fmtDate(x.date)}</td><td>${fmtTime(x.start,x.end)}</td><td>${esc(examName(x))}${x.course.teacher ? ` <span style="color:var(--soft)">(${esc(x.course.teacher)})</span>` : ''}${hints ? `<div class="hints-inline">${hints}</div>` : ''}</td><td>${hints}</td></tr>`; }).join('')}
+        </tbody></table>` : `<p>Keine passenden Klausuren im Kalender gefunden.</p>`}
+        ${!s.tt.jg ? `<p class="hint">Der Jahrgang wurde im Stundenplan nicht erkannt – es werden Klausuren aller Jahrgänge verglichen. Bitte genau prüfen.</p>` : ''}
+        ${(() => { const apfMiss = abi ? [3,4].filter(n => s.apf[n] && s.selected.has(s.apf[n]) && !exams.some(x => x.apf === n)) : [];
+          const items = [...missing.map(c => `<li>Für <b>${esc(subjName(c))}</b> (${esc(c.teacher)}) steht keine Klausur im Kalender${c.subj.toLowerCase()==='sk'?' – beim Seminarkurs normal':''}.</li>`),
+            ...apfMiss.map(n => { const c = s.tt.courses.find(k => courseKey(k) === s.apf[n]); return `<li>Für dein ${n}. Prüfungsfach <b>${esc(subjName(c))}</b> steht im Moment keine Abitur-Klausur im Kalender.</li>`; })];
+          return items.length ? `<ul class="notes">${items.join('')}</ul>` : ''; })()}
+        <div class="actions">
+          <button class="primary" data-act="ics" ${exams.length ? '' : 'disabled'}>In meinen Kalender (.ics)</button>
+          <button data-act="copy">Als Text kopieren</button>
+          <span class="msg ok" data-role="msg"></span>
+        </div>
+        <details><summary>Text-Vorschau</summary><pre class="out"></pre></details>
+      </div>`;
+    const txt = buildText(s, exams, today);
+    el.querySelector('pre.out').textContent = txt;
+    el.querySelectorAll('input[type=checkbox]').forEach(cb => cb.addEventListener('change', () => { cb.checked ? s.selected.add(cb.dataset.key) : s.selected.delete(cb.dataset.key); render(); }));
+    el.querySelectorAll('select[data-apf]').forEach(sel => sel.addEventListener('change', () => { s.apf[sel.dataset.apf] = sel.value || null; render(); }));
+    el.querySelector('[data-act=remove]').onclick = () => { students.splice(students.indexOf(s), 1); render(); };
+    el.querySelector('[data-act=copy]').onclick = async () => {
+      try { await navigator.clipboard.writeText(txt); flash(el, 'Kopiert ✓'); }
+      catch { el.querySelector('details').open = true; flash(el, 'Bitte aus der Vorschau kopieren'); }
+    };
+    el.querySelector('[data-act=ics]').onclick = () => downloadICS(s, exams);
+    root.appendChild(el);
+  }
+}
+function flash(el, t) { const m = el.querySelector('[data-role=msg]'); m.textContent = t; setTimeout(() => m.textContent = '', 2500); }
+function buildText(s, exams, today) {
+  const head = `Klausurtermine ${s.tt.first || s.tt.name || ''}${s.tt.jg ? ` (Jg. ${s.tt.jg})` : ''}`;
+  const lines = exams.map(x => `${fmtDate(x.date)} | ${fmtTime(x.start,x.end)} | ${x.apf ? 'Abi-Klausur ' : ''}${examName(x)}${examWho(x)}${x.apf ? ` – APF${x.apf}` : ''}${x.date<today?' – schon vorbei':x.date===today?' – heute':''}${clashes(x, exams)?' – Überschneidung!':''}${!x.course.placeholder && sameCourseCount(x, exams) > 1 ? ' – mehrere Termine, bitte nachfragen' : ''}`);
+  const none = s.tt.courses.filter(c => s.selected.has(courseKey(c)) && !exams.some(x => courseKey(x.course) === courseKey(c)));
+  const pend = s.tt.jg === 13 ? pendingApf(s.tt, s.apf) : [];
+  const extra = (none.length ? `\nOhne Klausur im Kalender: ${none.map(c => `${subjName(c)} (${c.teacher})`).join(', ')}` : '')
+    + (pend.length ? `\nNoch offen: Abitur-Klausuren für das 3./4. Prüfungsfach (${[...new Set(pend.map(e => fmtDate(e.date)))].join(', ')}) – Prüfungsfach auswählen.` : '');
+  return `${head}\n\n${lines.join('\n') || '(keine Termine gefunden)'}${extra}\n\nQuelle: voltaireschule.de → Jg. 11-13 Klausuren (Stand ${DATA.stand})`;
+}
+function buildICS(s, exams) {
+  const e = t => String(t).replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\n/g,'\\n');
+  const dt = (d, t) => d.replace(/-/g,'') + 'T' + (t ? tpad(t).replace(':','') : '0800') + '00';
+  const stamp = new Date().toISOString().replace(/[-:]/g,'').replace(/\.\d+Z$/,'Z');
+  const ev = exams.map(x => ['BEGIN:VEVENT',
+    `UID:${x.date}-${x.course.subj}-${x.course.level}-${x.course.teacher}@klausuren.voltaireschule.de`,
+    `DTSTAMP:${stamp}`, `DTSTART:${dt(x.date,x.start)}`, `DTEND:${dt(x.date,x.end || x.start)}`,
+    `SUMMARY:${e((x.apf ? 'Abi-Klausur ' : 'Klausur ') + examName(x) + examWho(x) + (x.apf ? ' – APF' + x.apf : ''))}`,
+    'LOCATION:Voltaireschule Potsdam',
+    `DESCRIPTION:${e('Aus dem Klausurkalender der Voltaireschule (Stand ' + DATA.stand + '). Ohne Gewähr.')}`,
+    'BEGIN:VALARM','ACTION:DISPLAY','DESCRIPTION:Klausur morgen','TRIGGER:-P1D','END:VALARM','END:VEVENT'].join('\r\n'));
+  return ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Voltaireschule//Klausur-Finder//DE','CALSCALE:GREGORIAN', ...ev, 'END:VCALENDAR'].join('\r\n');
+}
+function downloadICS(s, exams) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([buildICS(s, exams)], { type:'text/calendar' }));
+  a.download = `Klausuren_${(s.tt.name || 'Stundenplan').replace(/\s+/g,'_')}.ics`;
+  a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+// ---------- Dateien ----------
+async function handleFiles(files) {
+  const msg = document.getElementById('loadMsg');
+  if (!files.length) { msg.className = 'msg err'; msg.textContent = 'Bitte eine PDF-Datei auswählen.'; return; }
+  msg.className = 'msg'; msg.textContent = 'Lese Stundenplan …';
+  const errors = [];
+  for (const f of files) {
+    try {
+      const tt = parseTimetable(await pdfToText(await f.arrayBuffer()));
+      if (!tt.courses.length) { errors.push(`${f.name}: keine Kurse gefunden – ist das ein Untis-Stundenplan?`); continue; }
+      const entry = { tt, selected: new Set(tt.courses.map(courseKey)), apf: { 3: null, 4: null } };
+      const same = tt.name ? students.findIndex(s => s.tt.name === tt.name && s.tt.jg === tt.jg) : -1;
+      if (same >= 0) students[same] = entry; else students.push(entry);   // gleiche Person nochmal hochgeladen → ersetzen
+    } catch (err) { errors.push(`${f.name}: ${err.message || err}`); }
+  }
+  render();
+  msg.className = errors.length ? 'msg err' : 'msg'; msg.textContent = errors.join(' · ');
+  if (!errors.length && files.length) document.getElementById('results').scrollIntoView({ behavior:'smooth', block:'start' });
+}
+const drop = document.getElementById('drop');
+document.getElementById('file').addEventListener('change', e => { handleFiles([...e.target.files]); e.target.value = ''; });
+['dragenter','dragover'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add('over'); }));
+['dragleave','drop'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove('over'); }));
+drop.addEventListener('drop', e => handleFiles([...e.dataTransfer.files].filter(f => /pdf$/i.test(f.type) || /\.pdf$/i.test(f.name))));
+
+// ---------- Von Hand aktualisieren ----------
+document.getElementById('applyPaste').onclick = () => {
+  const out = document.getElementById('pasteMsg');
+  const r = parseCalendarText(document.getElementById('paste').value);
+  if (!r.from) { out.className = 'msg err'; out.textContent = 'Kein Kalendermonat erkannt. Bitte die ganze Monatsansicht kopieren (mit „November 2026“ o. ä. oben).'; return; }
+  const base = DATA.kind === 'live' ? BUILTIN : DATA.events;
+  const kept = base.filter(e => e.date < r.from || e.date > r.to);
+  DATA = { kind:'manual', stand: nowDE(), events: dedupe([...kept, ...r.events]).sort((a,b) => a.date.localeCompare(b.date)) };
+  try { localStorage.setItem(MANUAL_KEY, JSON.stringify({ stand: DATA.stand, events: DATA.events })); } catch {}
+  out.className = 'msg ok'; out.textContent = `${r.events.length} Klausurtermine für ${fmtDate(r.from)}–${fmtDate(r.to)} übernommen.`;
+  document.getElementById('paste').value = ''; describeSource(); render();
+};
+document.getElementById('resetData').onclick = () => {
+  localStorage.removeItem(MANUAL_KEY); DATA = { events: BUILTIN, stand: BUILTIN_STAND, kind:'builtin' }; describeSource(); render();
+  const out = document.getElementById('pasteMsg'); out.className = 'msg ok'; out.textContent = 'Zurückgesetzt.';
+};
+
+initData();
+if (new URLSearchParams(location.search).has('debug')) window.__kf = { CONFIG, initData, mergeRanges, parseTimetable, parseCalendarText, parseICS, scrapeMonth, pdfToText, findExams, handleFiles, students, buildText, buildICS, get DATA() { return DATA; } };
+</script>
+</body>
+</html>
