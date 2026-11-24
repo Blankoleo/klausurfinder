@@ -1,0 +1,48 @@
+# Holt jeden Morgen die Klausurtermine aus dem Klausurkalender der Voltaireschule
+# und legt sie als termine.json neben index.html (GitHub Pages liefert sie dann aus).
+name: Termine aktualisieren
+
+on:
+  schedule:
+    # 04:30 UTC = 05:30 Uhr Winterzeit (MEZ) bzw. 06:30 Uhr Sommerzeit (MESZ)
+    - cron: '30 4 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: termine
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Playwright installieren
+        working-directory: tools
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+
+      - name: Termine holen
+        run: node tools/update-termine.mjs
+
+      - name: termine.json committen (nur bei Änderung)
+        run: |
+          if git diff --quiet -- termine.json && git ls-files --error-unmatch termine.json >/dev/null 2>&1; then
+            echo "Keine Änderung."
+            exit 0
+          fi
+          git config user.name "termine-bot"
+          git config user.email "termine-bot@users.noreply.github.com"
+          git add termine.json
+          git commit -m "Termine aktualisiert ($(date -u +'%Y-%m-%d'))"
+          git push

@@ -1,0 +1,12 @@
+{
+  "name": "klausurfinder-tools",
+  "private": true,
+  "type": "module",
+  "description": "Holt die Klausurtermine für termine.json (siehe update-termine.mjs)",
+  "scripts": {
+    "termine": "node update-termine.mjs"
+  },
+  "dependencies": {
+    "playwright": "^1.49.0"
+  }
+}

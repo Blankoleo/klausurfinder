@@ -1,0 +1,371 @@
+{
+ "stand": "24.11.2026 11:17",
+ "quelle": "Klausurkalender",
+ "weg": "admin-ajax (Feed 3, 112 Einträge)",
+ "monate": [
+  "2026-08",
+  "2026-09",
+  "2026-10",
+  "2026-11",
+  "2026-12",
+  "2027-01",
+  "2027-02",
+  "2027-03",
+  "2027-04",
+  "2027-05",
+  "2027-06",
+  "2027-07"
+ ],
+ "events": [
+  {
+   "date": "2026-11-13",
+   "start": "8:15",
+   "end": "9:45",
+   "jg": 11,
+   "text": "bio-Ros / bio-Tos / che-Wie / phy-Len"
+  },
+  {
+   "date": "2026-11-13",
+   "start": "14:05",
+   "end": "15:35",
+   "jg": 12,
+   "text": "spo-Bal* [g1] / spo-JSm* / spo-Gru*"
+  },
+  {
+   "date": "2026-11-16",
+   "start": "10:10",
+   "end": "11:40",
+   "jg": 12,
+   "text": "la-CRs / muk-PLa / pb-Swa / psy-Lep / wiwi-Bei / inf-Jen"
+  },
+  {
+   "date": "2026-11-16",
+   "start": "14:05",
+   "end": "15:35",
+   "jg": 11,
+   "text": "DE-Har"
+  },
+  {
+   "date": "2026-11-18",
+   "start": "8:15",
+   "end": "9:45",
+   "jg": 11,
+   "text": "ds-MKn* / ds-Hof* / ku-Ler / ku-CHr / mus-Wac*"
+  },
+  {
+   "date": "2026-11-18",
+   "start": "8:15",
+   "end": "9:45",
+   "jg": 12,
+   "text": "spo-JPi* / spo-JPa* / spo-Bal* [g6]"
+  },
+  {
+   "date": "2026-11-20",
+   "start": "12:30",
+   "end": "14:00",
+   "jg": 12,
+   "text": "ma-Alt / ma-RSp / ma-SGr / ma-FGr [?] / ma-Bie"
+  },
+  {
+   "date": "2026-11-23",
+   "start": "8:15",
+   "end": "9:45",
+   "jg": 12,
+   "text": "ds-Wac*"
+  },
+  {
+   "date": "2026-11-23",
+   "start": "8:15",
+   "end": "9:45",
+   "jg": 12,
+   "text": "en-JBe / en-Ber / en-Soe"
+  },
+  {
+   "date": "2026-11-23",
+   "start": "10:10",
+   "end": "11:40",
+   "jg": 11,
+   "text": "ds-PFa* / en-Jau / en-Eng"
+  },
+  {
+   "date": "2026-11-24",
+   "start": "9:00",
+   "end": "14:00",
+   "jg": 13,
+   "text": "Klausur unter Abiturbedingungen APF1 BIO-Wie [300 min, zzgl. NTA]"
+  },
+  {
+   "date": "2026-11-24",
+   "start": "9:00",
+   "end": "14:15",
+   "jg": 13,
+   "text": "Klausur unter Abiturbedingungen APF1 DE-MKn [315 min, zzgl. NTA]"
+  },
+  {
+   "date": "2026-11-24",
+   "start": "9:00",
+   "end": "13:45",
+   "jg": 13,
+   "text": "Klausur unter Abiturbedingungen APF1 EN-Bue / EN-Fri [285 min, zzgl. NTA]"
+  },
+  {
+   "date": "2026-11-24",
+   "start": "9:00",
+   "end": "13:30",
+   "jg": 13,
+   "text": "Klausur unter Abiturbedingungen APF1 GE-Har / GE-Swe [270 min, zzgl. NTA]"
+  },
+  {
+   "date": "2026-11-24",
+   "start": "9:00",
+   "end": "13:30",
+   "jg": 13,
+   "text": "Klausur unter Abiturbedingungen APF1 INF-Jen [270 min, zzgl. NTA]"
+  },
+  {
+   "date": "2026-11-25",
+   "start": "12:30",
+   "end": "14:00",
+   "jg": 11,
+   "text": "de-Sie / de-Kni / de-Hof"
+  },
+  {
+   "date": "2026-11-25",
+   "start": "12:30",
+   "end": "14:00",
+   "jg": 12,
+   "text": "bio-Tos / bio-Mau / bio-May / che-Wie / phy-Len / phy-Fei"
+  },
+  {
+   "date": "2026-11-26",
+   "start": "8:30",
+   "end": "10:45",
+   "jg": 13,
+   "text": "Klausur unter Abiturbedingungen APF4 [135 min, zzgl. NTA]"
+  },
+  {
+   "date": "2026-11-27",
+   "start": "8:15",
+   "end": "11:15",
+   "jg": 12,
+   "text": "DE-Hoe** / FRZ-Lig** [180 min; nach Abgabe max. 25 min Pause]"
+  },
+  {
+   "date": "2026-11-27",
+   "start": "8:15",
+   "end": "10:45",
+   "jg": 12,
+   "text": "EK-JPa** [150 min; nach Abgabe max. 25 min Pause]"
+  },
+  {
+   "date": "2026-11-27",
+   "start": "8:15",
+   "end": "10:30",
+   "jg": 12,
+   "text": "EN-JBe** / EN-Jau** / GE-Swe** / GE-Har** / MA-CKa** [135 min; nach Abgabe max. 25 min Pause]"
+  },
+  {
+   "date": "2026-11-27",
+   "start": "12:30",
+   "end": "14:00",
+   "jg": 11,
+   "text": "ma-Jen / ma-FGr / ma-Sur"
+  },
+  {
+   "date": "2026-11-30",
+   "start": "8:15",
+   "end": "9:45",
+   "jg": 11,
+   "text": "frz-Far / spa-Szu / spa-Ten / la-CRs / muk-Rad / pb-Haf / psy-Lep"
+  },
+  {
+   "date": "2026-11-30",
+   "start": "9:00",
+   "end": "12:30",
+   "jg": 13,
+   "text": "Klausur unter Abiturbedingungen APF3 GEWI (ek, ge, his, pb, wiwi, ecm) / ku / spa [210 min, zzgl. NTA]"
+  },
+  {
+   "date": "2026-11-30",
+   "start": "9:00",
+   "end": "13:15",
+   "jg": 13,
+   "text": "Klausur unter Abiturbedingungen APF3 NAWI (bio, phy) / de / en / frz [255 min, zzgl. NTA]"
+  },
+  {
+   "date": "2026-11-30",
+   "start": "9:00",
+   "end": "13:45",
+   "jg": 13,
+   "text": "Klausur unter Abiturbedingungen APF3 ma [285 min, zzgl. NTA]"
+  },
+  {
+   "date": "2026-12-01",
+   "start": "12:30",
+   "end": "15:30",
+   "jg": 12,
+   "text": "DE-Sie** [180 min; nach Abgabe max. 25 min Pause]"
+  },
+  {
+   "date": "2026-12-01",
+   "start": "12:30",
+   "end": "15:00",
+   "jg": 12,
+   "text": "EK-Lie** [150 min; nach Abgabe max. 25 min Pause]"
+  },
+  {
+   "date": "2026-12-01",
+   "start": "12:30",
+   "end": "14:45",
+   "jg": 12,
+   "text": "EN-JSm** / EN-Soe** / KU-Zur** / MA-Alt** / Bio-Ros** [135 min; nach Abgabe max. 25 min Pause]"
+  },
+  {
+   "date": "2026-12-03",
+   "start": "9:00",
+   "end": "14:15",
+   "jg": 13,
+   "text": "Klausur unter Abiturbedingungen APF2 DE-NSi [315 min, zzgl. NTA]"
+  },
+  {
+   "date": "2026-12-03",
+   "start": "9:00",
+   "end": "13:30",
+   "jg": 13,
+   "text": "Klausur unter Abiturbedingungen APF2 EK-Bei / KU-Ler [270 min, zzgl. NTA]"
+  },
+  {
+   "date": "2026-12-03",
+   "start": "9:00",
+   "end": "13:45",
+   "jg": 13,
+   "text": "Klausur unter Abiturbedingungen APF2 EN-Pre / EN-JSm / FRZ-Hal [285 min, zzgl. NTA]"
+  },
+  {
+   "date": "2026-12-03",
+   "start": "9:00",
+   "end": "14:30",
+   "jg": 13,
+   "text": "Klausur unter Abiturbedingungen APF2 MA-CKa [330 min, zzgl. NTA]"
+  },
+  {
+   "date": "2026-12-04",
+   "start": "10:10",
+   "end": "11:40",
+   "jg": 11,
+   "text": "BIO-SMo / DE-Kni / EN-Pre / KU-Ler"
+  },
+  {
+   "date": "2026-12-04",
+   "start": "10:10",
+   "end": "11:40",
+   "jg": 11,
+   "text": "GE-CRs"
+  },
+  {
+   "date": "2026-12-07",
+   "start": "9:00",
+   "end": "14:30",
+   "jg": 13,
+   "text": "Klausur unter Abiturbedingungen APF2 MA-CKa [330 min, zzgl. NTA]"
+  },
+  {
+   "date": "2026-12-07",
+   "start": "12:30",
+   "end": "14:00",
+   "jg": 11,
+   "text": "EK-Swe / EN-Soe / EN-Ber / MA-Fei"
+  },
+  {
+   "date": "2026-12-07",
+   "start": "12:30",
+   "end": "14:00",
+   "jg": 12,
+   "text": "ds-Hof* / ds-Zur* / ku-Sae / ku-Ler / mus-RSp*"
+  },
+  {
+   "date": "2026-12-10",
+   "start": "8:15",
+   "end": "9:45",
+   "jg": 12,
+   "text": "de-Kni / de-PFa / de-Har / de-Sie"
+  },
+  {
+   "date": "2026-12-10",
+   "start": "12:30",
+   "end": "14:00",
+   "jg": 11,
+   "text": "ek-May / muk-Kni / pb-Gru / phi-Rad / psy-Gor / wiwi-Bei / inf-Jen"
+  },
+  {
+   "date": "2026-12-15",
+   "start": "8:15",
+   "end": "9:45",
+   "jg": 12,
+   "text": "ge-JBe / his-Hue"
+  },
+  {
+   "date": "2026-12-15",
+   "start": "8:15",
+   "end": "9:45",
+   "jg": 12,
+   "text": "ge-Lig / ge-Swe / ge-CRs"
+  },
+  {
+   "date": "2026-12-15",
+   "start": "12:30",
+   "end": "14:00",
+   "jg": 11,
+   "text": "spo-Bal* / spo-Bue* [g2] / spo-SMo*"
+  },
+  {
+   "date": "2026-12-17",
+   "start": "8:15",
+   "end": "9:45",
+   "jg": 11,
+   "text": "ge-Sae / ge-Spe / ge-Lig"
+  },
+  {
+   "date": "2026-12-17",
+   "start": "8:15",
+   "end": "9:45",
+   "jg": 11,
+   "text": "spo-Bue* [g4] / spo-JPa* / spo-Gru*"
+  },
+  {
+   "date": "2026-12-17",
+   "start": "12:30",
+   "end": "14:00",
+   "jg": 12,
+   "text": "ecm-Haf / frz-Ken / spa-Szu / phi-Rad / ek-May / psy-Gor / muk-Kni / pb-Gru"
+  },
+  {
+   "date": "2027-04-19",
+   "start": null,
+   "end": null,
+   "jg": 11,
+   "text": "Klausurphase - Beginn"
+  },
+  {
+   "date": "2027-04-19",
+   "start": null,
+   "end": null,
+   "jg": 12,
+   "text": "Klausurphase - Beginn"
+  },
+  {
+   "date": "2027-06-04",
+   "start": null,
+   "end": null,
+   "jg": 11,
+   "text": "Klausurphase - Ende"
+  },
+  {
+   "date": "2027-06-04",
+   "start": null,
+   "end": null,
+   "jg": 12,
+   "text": "Klausurphase - Ende"
+  }
+ ]
+}

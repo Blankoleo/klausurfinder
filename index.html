@@ -68,6 +68,8 @@
   .chip input { accent-color:var(--green); margin:0; }
   .chip.off { color:var(--soft); background:var(--cell); text-decoration:line-through; }
   .chip small { color:var(--soft); }
+  .addc { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:-8px 0 20px; font-size:14px; color:var(--soft); }
+  .addc select { font:500 14px Manrope, Arial, sans-serif; color:var(--text); padding:6px 8px; border:1px solid var(--line); background:#fff; border-radius:0; max-width:100%; }
 
   table { width:100%; border-collapse:collapse; font-size:15px; }
   th { text-align:left; font-weight:600; font-size:13px; text-transform:uppercase; letter-spacing:.04em; color:#fff; background:var(--green); padding:9px 12px; }
@@ -123,14 +125,14 @@
 <main class="wrap">
   <div class="crumbs"><a href="https://www.voltaireschule.de/">Home</a> › Termine › Deine Klausuren finden</div>
   <h1>Deine Klausuren finden</h1>
-  <p class="lead">Lade deinen Untis-Stundenplan als PDF hoch und du siehst sofort, wann du welche Klausur schreibst – passend zu deinen Kursen, direkt aus dem Klausurkalender der Jahrgänge 11 bis 13. Der Stundenplan wird nur in deinem Browser gelesen und nirgendwohin hochgeladen.</p>
+  <p class="lead">Lade deinen Untis-Stundenplan als PDF oder Screenshot hoch und du siehst sofort, wann du welche Klausur schreibst – passend zu deinen Kursen, direkt aus dem Klausurkalender der Jahrgänge 11 bis 13. Der Stundenplan wird nur in deinem Browser gelesen (auch Bilder) und nirgendwohin hochgeladen.</p>
 
   <div class="source old loading" id="source" role="status" aria-live="polite"><span class="dot" aria-hidden="true"></span><span id="sourceText">Lade Termine …</span></div>
 
   <label class="drop" id="drop">
-    <input type="file" id="file" accept="application/pdf" multiple>
+    <input type="file" id="file" accept=".pdf,application/pdf,image/*" multiple>
     <span class="round" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M6 10l6-6 6 6M4 20h16"/></svg></span>
-    <div><strong>Stundenplan-PDF hier ablegen</strong><span>oder klicken zum Auswählen · mehrere PDFs auf einmal gehen auch</span></div>
+    <div><strong>Stundenplan als PDF oder Screenshot hier ablegen</strong><span>oder tippen zum Auswählen (Dateien oder Fotos) · mehrere auf einmal gehen auch</span></div>
   </label>
   <div class="msg" id="loadMsg" role="status" aria-live="polite"></div>
 
@@ -173,6 +175,9 @@
    EINSTELLUNGEN – für die Schul-Website
    ----------------------------------------------------------------------
    Woher kommen die Termine? Die Seite probiert der Reihe nach:
+   0. TERMINE_JSON: Datei termine.json neben dieser Seite. Sie wird jeden
+      Morgen von einer GitHub Action (tools/update-termine.mjs) aus dem
+      Klausurkalender erzeugt. Gilt als aktuelle Quelle, wenn vorhanden.
    1. ICS_URLS: direkte Adresse(n) der Kalenderdatei des Klausurkalenders.
       Die Adresse steht in den Einstellungen des Kalender-Plugins
       (ICS Calendar Pro). Funktioniert, wenn die Datei auf demselben Server
@@ -180,8 +185,11 @@
    2. Liegt diese Seite auf voltaireschule.de, liest sie den Klausurkalender
       (CALENDAR_PAGE) automatisch im Hintergrund aus – ohne jede Einrichtung.
    3. Sonst: eingebaute Termine bzw. von Hand eingefügte.
+   (1. und 2. ersetzen – falls erfolgreich – die Termine aus 0.)
    ====================================================================== */
 const CONFIG = {
+  TERMINE_JSON: 'termine.json',  // '' = nicht verwenden
+  STALE_DAYS: 3,                 // älter als so viele Tage → dezenter Hinweis
   ICS_URLS: [],
   CALENDAR_PAGE: '/jahrgang-11-bis-13-klausuren/',
   SCHOOL_HOST: 'voltaireschule.de',
@@ -189,6 +197,8 @@ const CONFIG = {
   SCRAPE_TIMEOUT_MS: 20000,   // so lange wird pro Monat höchstens auf den Kalender gewartet
   CACHE_MINUTES: 0,           // 0 = nichts im Browser speichern (datensparsam); z. B. 60 = Termine 1 Std. zwischenspeichern
   PDFJS_BASE: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/', // kann auch selbst gehostet werden
+  TESSERACT_URL: 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js', // Texterkennung für Bilder (nur bei Bedarf geladen)
+  OCR_LANGS: 'deu+eng',
 };
 
 // ---------- Eingebaute Termine (Stand 16.11.2026) ----------
@@ -249,19 +259,24 @@ const SUBJECTS = {
   spa:'Spanisch', la:'Latein', sk:'Seminarkurs', muk:'muk', ecm:'ecm', ler:'LER',
 };
 const WD = ['So','Mo','Di','Mi','Do','Fr','Sa'];
-// „Jg. 12: …“ oder „Jg. 11-12: …“ (Klausureinträge haben immer einen Doppelpunkt)
-const JG_RE = /^Jg\.\s*(\d{1,2})(?:\s*[-–]\s*(\d{1,2}))?:\s*(.+)$/;
 const MANUAL_KEY = 'klausurFinder.manual.v1';
 const CACHE_KEY = 'klausurFinder.live.v1';
 
 // ---------- Hilfsfunktionen ----------
-const pad2 = n => String(n).padStart(2,'0');
-const isoOf = (y,m,d) => `${y}-${pad2(m+1)}-${pad2(d)}`;
 const todayISO = () => { const d = new Date(); return isoOf(d.getFullYear(), d.getMonth(), d.getDate()); };
 const nowDE = () => { const d = new Date(); return `${pad2(d.getDate())}.${pad2(d.getMonth()+1)}.${d.getFullYear()}, ${pad2(d.getHours())}:${pad2(d.getMinutes())} Uhr`; };
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const dedupe = evs => { const seen = new Set(); return evs.filter(e => { const k = [e.date,e.start,e.jg,e.text].join('|'); if (seen.has(k)) return false; seen.add(k); return true; }); };
 
+/* <termine-parser> ----------------------------------------------------
+   Dieser Block wird auch vom Skript tools/update-termine.mjs gelesen und
+   ausgeführt (GitHub Action, die termine.json jeden Morgen erneuert).
+   Nur reines JavaScript ohne Zugriff auf Seite/DOM hineinschreiben und die
+   Markierungen (<termine-parser> … </termine-parser>) nicht entfernen. */
+const pad2 = n => String(n).padStart(2,'0');
+const isoOf = (y,m,d) => `${y}-${pad2(m+1)}-${pad2(d)}`;
+// „Jg. 12: …“ oder „Jg. 11-12: …“ (Klausureinträge haben immer einen Doppelpunkt)
+const JG_RE = /^Jg\.\s*(\d{1,2})(?:\s*[-–]\s*(\d{1,2}))?:\s*(.+)$/;
 // ---------- Kalender-Text (Monatsansicht) lesen ----------
 function parseCalendarText(text) {
   const MON = ['januar','februar','märz','april','mai','juni','juli','august','september','oktober','november','dezember'];
@@ -295,6 +310,7 @@ function parseCalendarText(text) {
   }
   return { events: out, from: minD, to: maxD };
 }
+/* </termine-parser> ------------------------------------------------- */
 
 // ---------- ICS-Datei lesen ----------
 function parseICS(ics) {
@@ -424,6 +440,26 @@ async function loadLive(base, onProgress) {
   return res;
 }
 
+// ---------- termine.json (jeden Morgen per GitHub Action erzeugt) ----------
+const validEvent = e => e && /^\d{4}-\d{2}-\d{2}$/.test(e.date) && Number.isInteger(e.jg) && e.jg >= 5 && e.jg <= 13 && typeof e.text === 'string' && e.text
+  && (e.start == null || /^\d{1,2}:\d{2}$/.test(e.start)) && (e.end == null || /^\d{1,2}:\d{2}$/.test(e.end));
+async function loadJson() {
+  if (!CONFIG.TERMINE_JSON) return null;
+  try {
+    const r = await fetch(CONFIG.TERMINE_JSON, { cache:'no-store' });
+    if (!r.ok) return null;
+    const j = await r.json();
+    if (!j || typeof j.stand !== 'string' || !/^\d{2}\.\d{2}\.\d{4}/.test(j.stand) || !Array.isArray(j.events) || !j.events.length || !j.events.every(validEvent)) { console.warn('termine.json nicht plausibel'); return null; }
+    const mon = (Array.isArray(j.monate) ? j.monate : []).filter(m => /^\d{4}-\d{2}$/.test(m)).sort();
+    const dates = j.events.map(e => e.date).sort();
+    const from = mon.length ? `${mon[0]}-01` : dates[0], to = mon.length ? `${mon[mon.length-1]}-31` : dates[dates.length-1];
+    return { events: j.events.map(({date,start,end,jg,jgTo,text}) => ({ date, start: start || null, end: end || null, jg, ...(jgTo ? { jgTo } : {}), text })), stand: j.stand, quelle: j.quelle || 'Klausurkalender', from, to };
+  } catch (e) { console.warn('termine.json nicht ladbar:', e); return null; }
+}
+// „24.11.2026 05:31“ → Alter in Tagen
+const ageDays = stand => { const m = String(stand).match(/^(\d{2})\.(\d{2})\.(\d{4})(?:,?\s+(\d{1,2}):(\d{2}))?/); if (!m) return 0;
+  return (Date.now() - new Date(+m[3], +m[2]-1, +m[1], +(m[4]||0), +(m[5]||0)).getTime()) / 86400000; };
+
 // ---------- Datenquelle festlegen ----------
 let DATA = { events: BUILTIN, stand: BUILTIN_STAND, kind: 'builtin' };
 function manualData() { try { const s = JSON.parse(localStorage.getItem(MANUAL_KEY) || 'null'); if (s && Array.isArray(s.events)) return s; } catch {} return null; }
@@ -432,17 +468,24 @@ function setSource(state, text) {
   el.className = 'source' + (state === 'live' ? '' : ' old') + (state === 'loading' ? ' loading' : '');
   document.getElementById('sourceText').textContent = text;
 }
-const fallbackText = (kind, stand) => kind === 'manual' ? `von Hand aktualisierte Termine (${stand})` : `eingebaute Termine, Stand ${stand}`;
+const fallbackText = (kind, stand) => kind === 'manual' ? `von Hand aktualisierte Termine (${stand})` : kind === 'json' ? `Termine aus dem Klausurkalender vom ${stand}` : `eingebaute Termine, Stand ${stand}`;
 function describeSource() {
-  if (DATA.kind === 'live') setSource('live', `Termine live aus dem ${DATA.how} der Schule · aktualisiert ${DATA.stand}`);
+  if (DATA.kind === 'json') setSource(ageDays(DATA.stand) > CONFIG.STALE_DAYS ? 'old' : 'live',
+    `Termine aus dem Klausurkalender der Schule · aktualisiert ${DATA.stand}` + (ageDays(DATA.stand) > CONFIG.STALE_DAYS
+      ? ` – seitdem nicht mehr aktualisiert, bitte im Klausurkalender gegenprüfen` : ` · wird jeden Morgen automatisch aktualisiert`));
+  else if (DATA.kind === 'live') setSource('live', `Termine live aus dem ${DATA.how} der Schule · aktualisiert ${DATA.stand}`);
   else if (DATA.kind === 'partial') setSource('live', `Termine live aus dem ${DATA.how} (${DATA.loaded} von ${DATA.total} Monaten) · für den Rest ${fallbackText(DATA.fallbackKind, DATA.fallbackStand)} · aktualisiert ${DATA.stand}`);
   else if (DATA.liveFailed) setSource('old', `Der Klausurkalender konnte gerade nicht geladen werden – angezeigt werden ${fallbackText(DATA.kind, DATA.stand)}. Bitte später neu laden.`);
   else if (DATA.kind === 'manual') setSource('old', `Termine von Hand aktualisiert am ${DATA.stand}`);
-  else setSource('old', `Eingebaute Termine, Stand ${DATA.stand} – auf voltaireschule.de aktualisiert sich diese Seite automatisch`);
-  document.getElementById('manual').style.display = (DATA.kind === 'live' || DATA.kind === 'partial') ? 'none' : '';
+  else setSource('old', `Eingebaute Termine, Stand ${DATA.stand} – die aktuellen Termine konnten gerade nicht geladen werden. Maßgeblich ist der Klausurkalender der Schule.`);
+  document.getElementById('manual').style.display = (DATA.kind === 'live' || DATA.kind === 'partial' || (DATA.kind === 'json' && ageDays(DATA.stand) <= CONFIG.STALE_DAYS)) ? 'none' : '';
 }
 async function initData() {
   const m = manualData(); if (m) DATA = { ...m, kind:'manual' };
+  const j = await loadJson();
+  // termine.json ersetzt im abgedeckten Zeitraum die eingebauten/von Hand eingefügten Termine
+  // (von Hand Eingefügtes nur, wenn es älter ist als termine.json)
+  if (j && !(m && ageDays(m.stand) < ageDays(j.stand))) { DATA = { events: mergeRanges(DATA.events, [j]), stand: j.stand, kind:'json' }; render(); }
   const base = DATA.events;
   if (CONFIG.ICS_URLS.length || onSchoolSite()) setSource('loading', 'Lade aktuelle Termine aus dem Klausurkalender …');
   else { describeSource(); return; }
@@ -452,7 +495,7 @@ async function initData() {
     render();
   });
   if (live && !live.failed) DATA = { events: live.events, stand: live.stand, how: live.how, kind: live.partial ? 'partial' : 'live', loaded: live.loaded, total: live.total,
-    fallbackKind: m ? 'manual' : 'builtin', fallbackStand: m ? m.stand : BUILTIN_STAND };
+    fallbackKind: DATA.kind, fallbackStand: DATA.stand };
   else if (live && live.failed) DATA = { ...DATA, events: base, liveFailed: true };
   describeSource(); render();
 }
@@ -495,6 +538,144 @@ function parseTimetable(text) {
   return { name, first, jg, tutor, courses: [...courses.values()] };
 }
 
+// ---------- Stundenplan als Bild (Screenshot/Foto) lesen ----------
+let tessWorker = null, tessLoading = null, lastOcr = null;
+function loadScript(src) { return new Promise((ok, fail) => { const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = () => fail(new Error('Texterkennung konnte nicht geladen werden – Internetverbindung prüfen')); document.head.appendChild(s); }); }
+let ocrProgress = () => {};
+async function getTesseract() {
+  if (tessWorker) return tessWorker;
+  if (!tessLoading) tessLoading = (async () => {
+    if (!window.Tesseract) await loadScript(CONFIG.TESSERACT_URL);
+    const w = await window.Tesseract.createWorker(CONFIG.OCR_LANGS, 1, { logger: m => ocrProgress(m) });
+    await w.setParameters({ tessedit_pageseg_mode: '11', preserve_interword_spaces: '0' });   // 11 = verstreuter Text (Tabellenzellen)
+    return (tessWorker = w);
+  })().catch(e => { tessLoading = null; throw e; });
+  return tessLoading;
+}
+// Bild öffnen (PNG/JPG/HEIC – HEIC kann nur Safari selbst öffnen; iOS wandelt beim Hochladen meist in JPEG um)
+async function decodeImage(file) {
+  try { return await createImageBitmap(file); } catch {}
+  const url = URL.createObjectURL(file);
+  try { const img = new Image(); img.src = url; await img.decode(); return img; }
+  catch { throw new Error(/hei[cf]/i.test(file.type + file.name) ? 'HEIC-Bild kann dieser Browser nicht öffnen – bitte als Screenshot (PNG) oder JPG' : 'Bild konnte nicht geöffnet werden'); }
+  finally { setTimeout(() => URL.revokeObjectURL(url), 5000); }
+}
+// Verkleinern/vergrößern (Text gut lesbar, aber nicht zu groß fürs iPhone), Graustufen, Kontrast strecken, dunkle Screenshots umkehren
+function prepareImage(img) {
+  const w0 = img.width, h0 = img.height;
+  let k = Math.min(2400 / Math.max(w0, h0), 2.5);
+  if (w0 * h0 * k * k > 9e6) k = Math.sqrt(9e6 / (w0 * h0));
+  const w = Math.max(1, Math.round(w0 * k)), h = Math.max(1, Math.round(h0 * k));
+  const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+  const ctx = cv.getContext('2d', { willReadFrequently: true });
+  ctx.imageSmoothingQuality = 'high'; ctx.drawImage(img, 0, 0, w, h);
+  if (img.close) img.close();
+  const id = ctx.getImageData(0, 0, w, h), d = id.data, hist = new Uint32Array(256);
+  for (let i = 0; i < d.length; i += 4) { const g = (d[i]*299 + d[i+1]*587 + d[i+2]*114) / 1000 | 0; d[i] = g; hist[g]++; }
+  const n = w * h; let lo = 0, hi = 255, acc = 0, sum = 0;
+  for (let g = 0; g < 256; g++) sum += g * hist[g];
+  for (acc = 0; lo < 255 && (acc += hist[lo]) < n * 0.01; lo++);
+  for (acc = 0; hi > 0 && (acc += hist[hi]) < n * 0.01; hi--);
+  const inv = sum / n < 110, span = Math.max(1, hi - lo);
+  for (let i = 0; i < d.length; i += 4) { let g = Math.min(255, Math.max(0, (d[i] - lo) * 255 / span)); if (inv) g = 255 - g; d[i] = d[i+1] = d[i+2] = g; }
+  // Tabellenlinien entfernen (lange dunkle Linien waagerecht/senkrecht) – sonst liest die Texterkennung sie als Buchstaben
+  const dark = new Uint8Array(w * h); for (let p = 0; p < w * h; p++) dark[p] = d[p*4] < 140 ? 1 : 0;
+  const wipe = new Uint8Array(w * h), minH = Math.max(40, w * 0.08), minV = Math.max(40, h * 0.06);
+  for (let y = 0; y < h; y++) for (let x = 0, run = 0; x <= w; x++) {
+    if (x < w && dark[y*w + x]) run++; else { if (run >= minH) for (let i = x - run; i < x; i++) wipe[y*w + i] = 1; run = 0; } }
+  for (let x = 0; x < w; x++) for (let y = 0, run = 0; y <= h; y++) {
+    if (y < h && dark[y*w + x]) run++; else { if (run >= minV) for (let i = y - run; i < y; i++) wipe[i*w + x] = 1; run = 0; } }
+  for (let p = 0; p < w * h; p++) if (wipe[p]) d[p*4] = d[p*4+1] = d[p*4+2] = 255;
+  ctx.putImageData(id, 0, 0);
+  return cv;
+}
+async function imageToTimetable(file, onProgress) {
+  ocrProgress = m => {
+    if (m.status === 'recognizing text') onProgress(`Lese Bild … ${Math.round(m.progress * 100)} %`);
+    else if (/load|initializ/i.test(m.status)) onProgress('Lade Texterkennung …');
+  };
+  onProgress(tessWorker ? 'Lese Bild …' : 'Lade Texterkennung …');
+  const [worker, img] = await Promise.all([getTesseract(), decodeImage(file)]);
+  const { data } = await worker.recognize(prepareImage(img));
+  lastOcr = data;
+  const text = data.text.replace(/\s+/g, ' ');
+  const head = parseTimetable(text);                 // Name, Jahrgang, Tutor wie beim PDF
+  const geo = coursesFromWords(data.words || []);    // tolerant, nach Position in der Tabelle
+  // Falls die Position nichts ergibt: gleiche Kurs-Erkennung wie beim PDF auf dem Fließtext (nur bekannte Kurse)
+  const K = knownCourses();
+  const courses = geo.length ? geo : head.courses.filter(c => K.pairs.has(`${c.subj.toLowerCase()}|${c.teacher}`));
+  let { jg } = head, jgGuess = false;
+  if (!jg) {   // Jahrgang nicht lesbar → aus den Kursen erschließen: In welchem Jahrgang haben die meisten davon Klausuren?
+    const score = [11, 12, 13].map(j => [j, courses.filter(c => DATA.events.some(e => inJg(e, j) && tokensOf(e.text).toks.some(t =>
+      t.subj.toLowerCase() === c.subj.toLowerCase() && t.teacher === c.teacher && t.isLK === c.isLK))).length]).sort((a,b) => b[1] - a[1]);
+    if (score[0][1] > 0 && score[0][1] > score[1][1]) { jg = score[0][0]; jgGuess = true; }
+  }
+  return { ...head, jg, jgGuess, courses, fromImage: true };
+}
+// ---------- Kurse aus Texterkennung (Wörter mit Position) ----------
+// OCR liest Tabellen zeilenweise: „.MA L2“ steht in der Zelle über „CKa R0-21“. Darum wird für jeden
+// Fach-Eintrag die Lehrkraft direkt DARUNTER (oder rechts daneben) gesucht. Tolerant gegen typische
+// Lesefehler (O/0, l/1/I, fehlende Leerzeichen/Punkte) – aber nur, wenn das Ergebnis ein Kurs ist,
+// der so im Klausurkalender vorkommt (bzw. ohne jede Korrektur exakt wie im PDF gelesen wurde).
+const fold = s => s.toLowerCase().replace(/0/g,'o').replace(/[1|!i]/g,'l').replace(/5/g,'s').replace(/8/g,'b').replace(/rn/g,'m').replace(/vv/g,'w');
+function knownCourses() {
+  const subj = new Map(), teach = new Map(), pairs = new Set();
+  for (const e of DATA.events) for (const t of tokensOf(e.text).toks) {
+    subj.set(fold(t.subj), t.subj.toLowerCase()); teach.set(fold(t.teacher), t.teacher); pairs.add(`${t.subj.toLowerCase()}|${t.teacher}`);
+  }
+  for (const k of Object.keys(SUBJECTS)) if (!subj.has(fold(k))) subj.set(fold(k), k);
+  return { subj, teach, pairs };
+}
+function coursesFromWords(words) {
+  const K = knownCourses();
+  const W = words.map(w => ({ t: w.text.trim(), ...w.bbox })).filter(w => w.t);
+  if (!W.length) return [];
+  const hs = W.map(w => w.y1 - w.y0).sort((a,b) => a-b), h = hs[hs.length >> 1] || 20;
+  const LEVEL = /^([LlI1|]|[gq9])?(\d{1,2})$/;
+  const normLevel = s => { const m = s.match(LEVEL); if (!m) return null; return m[1] ? (/[gq9]/.test(m[1]) ? 'g' : 'L') + m[2] : (m[2].length === 1 ? m[2] : null); };
+  const res = new Map();
+  for (const w of W) {
+    // Fach-Teil: führende Satzzeichen/Sternchen weg; „MAL2“/„kug2“ (Fach+Niveau zusammengeklebt) auftrennen
+    const core = w.t.replace(/^[.,‚„'`´·:;*°"»«]+/, '').replace(/^\*/, '');
+    const dotted = core !== w.t;
+    let subj = null, level = null, lw = null;
+    for (let n = Math.min(5, core.length); n >= 2 && !subj; n--) {
+      const s = core.slice(0, n), rest = core.slice(n);
+      if (!/^[A-Za-z0-9|]+$/.test(s) || !K.subj.has(fold(s))) continue;
+      if (!rest) { subj = s; }
+      else if (normLevel(rest)) { subj = s; level = normLevel(rest); }
+    }
+    if (!subj) continue;
+    if (!level) {   // Niveau als eigenes Wort rechts daneben?
+      lw = W.find(v => v !== w && Math.abs((v.y0+v.y1)/2 - (w.y0+w.y1)/2) < h*0.6 && v.x0 > (w.x0 + w.x1) / 2 && v.x0 - w.x1 < h*1.6 && normLevel(v.t));
+      if (lw) level = normLevel(lw.t);
+    }
+    if (!dotted && !level) continue;               // ohne Punkt und ohne Niveau zu unsicher (z. B. Wörter im Text)
+    // Lehrkraft: Wort direkt darunter (gleiche linke Kante) – sonst rechts neben dem Niveau
+    const right = (lw || w).x1;
+    const cand = W.filter(v => v !== w && v !== lw && (
+      (v.y0 >= w.y1 - h*0.3 && v.y0 <= w.y1 + h*1.4 && Math.abs(v.x0 - w.x0) < h*1.8) ||
+      (Math.abs((v.y0+v.y1)/2 - (w.y0+w.y1)/2) < h*0.6 && v.x0 > right - 2 && v.x0 - right < h*2.5)))
+      .sort((a,b) => (Math.abs(a.y0 - w.y1) + Math.abs(a.x0 - w.x0)) - (Math.abs(b.y0 - w.y1) + Math.abs(b.x0 - w.x0)));
+    for (const v of cand) {
+      const raw = v.t.replace(/^[^A-Za-z0-9|]+/, '').replace(/(R\d|R[O0o]\d|SpH|Sp[Hh]).*$/, '').replace(/[^A-Za-z0-9|]+$/, '');
+      if (raw.length < 2 || raw.length > 4) continue;
+      const known = K.teach.get(fold(raw));
+      const exact = /^[A-Z][A-Za-z]{1,3}$/.test(raw);
+      if (!known && !exact) continue;
+      const teacher = known || raw;
+      const isLK = level ? level[0] === 'L' : subj === subj.toUpperCase();
+      const s = K.subj.get(fold(subj));
+      const clean = exact && /^[A-Za-z]{2,5}$/.test(subj) && fold(subj) === fold(s) && subj.toLowerCase() === s;
+      if (!clean && !K.pairs.has(`${s}|${teacher}`)) continue;   // korrigiert → nur bekannte Kurse
+      const c = { subj: isLK ? s.toUpperCase() : s, level: level || '', teacher, isLK, ocr: true };
+      if (!res.has(courseKey(c))) res.set(courseKey(c), c);
+      break;
+    }
+  }
+  return [...res.values()];
+}
+
 // ---------- Abgleich ----------
 function tokensOf(text) {
   const note = (text.match(/\[(\d+ min)[^\]]*\]/) || [])[1] || null;
@@ -529,7 +710,7 @@ function findExams(tt, selected, apf = {}) {
     for (const c of tt.courses) {
       if (!selected.has(courseKey(c))) continue;
       const hit = toks.find(t => t.subj.toLowerCase() === c.subj.toLowerCase() && t.teacher === c.teacher && t.isLK === c.isLK
-        && (!t.group || t.group === '?' || t.group === c.level.toLowerCase()));
+        && (!t.group || t.group === '?' || !c.level || t.group === c.level.toLowerCase()));
       if (hit) res.push({ ...e, course:c, note, unsure: hit.group === '?', apf:n });
     }
   }
@@ -549,6 +730,14 @@ const fmtTime = (s,e) => s ? `${tpad(s)}–${e ? tpad(e) : '?'}` : 'ganztägig';
 
 // ---------- Ausgabe ----------
 const students = [];
+// Kurse, die im Klausurkalender (für den Jahrgang) vorkommen, aber noch nicht in der Liste stehen
+function addableCourses(s) {
+  const have = new Set(s.tt.courses.map(c => `${c.subj.toLowerCase()}|${c.teacher}|${c.isLK}`)), out = new Map();
+  for (const e of DATA.events) { if (!inJg(e, s.tt.jg)) continue;
+    for (const t of tokensOf(e.text).toks) { const c = { subj: t.isLK ? t.subj.toUpperCase() : t.subj.toLowerCase(), level: '', teacher: t.teacher, isLK: t.isLK, added: true };
+      const k = `${c.subj.toLowerCase()}|${c.teacher}|${c.isLK}`; if (!have.has(k) && !out.has(k)) out.set(k, c); } }
+  return [...out.values()].sort((a,b) => subjName(a).localeCompare(subjName(b), 'de') || a.teacher.localeCompare(b.teacher));
+}
 function render() {
   const root = document.getElementById('results'); root.innerHTML = '';
   const today = todayISO();
@@ -572,12 +761,15 @@ function render() {
     const el = document.createElement('section'); el.className = 'student';
     el.innerHTML = `
       <div class="student-head">
-        <div><h2>${esc(s.tt.name || 'Unbekannt')}</h2><div class="meta">${s.tt.jg ? `Jahrgang ${s.tt.jg}` : ''}${s.tt.tutor ? ` · Tutor/in ${esc(s.tt.tutor)}` : ''} · ${exams.length} Klausuren</div></div>
+        <div><h2>${esc(s.tt.name || (s.tt.fromImage ? 'Stundenplan aus Bild' : 'Unbekannt'))}</h2><div class="meta">${s.tt.jg ? `Jahrgang ${s.tt.jg}${s.tt.jgGuess ? ' (vermutet)' : ''}` : ''}${s.tt.tutor ? ` · Tutor/in ${esc(s.tt.tutor)}` : ''} · ${exams.length} Klausuren</div></div>
         <button class="link" data-act="remove">Entfernen ✕</button>
       </div>
       <div class="student-body">
-        <div class="label">Deine Kurse – antippen, um abgewählte auszublenden</div>
+        <div class="label">Deine Kurse – antippen, um ${s.tt.fromImage ? 'falsch erkannte oder ' : ''}abgewählte auszublenden</div>
+        ${s.tt.fromImage ? `<p class="hint">Aus einem Bild gelesen – bitte kurz prüfen: Stimmen die Kurse? Fehlt einer, füge ihn unten hinzu.</p>` : ''}
         <div class="courses">${s.tt.courses.map(c => { const on = s.selected.has(courseKey(c)); return `<label class="chip${on?'':' off'}"><input type="checkbox" data-key="${esc(courseKey(c))}" ${on?'checked':''}>${esc(subjName(c))} <small>${esc(c.teacher)}</small></label>`; }).join('')}</div>
+        ${(() => { const opts = addableCourses(s); return opts.length ? `<div class="addc"><label for="add-${students.indexOf(s)}">Kurs fehlt?</label>
+          <select id="add-${students.indexOf(s)}" data-act="add"><option value="">Kurs aus dem Klausurkalender hinzufügen …</option>${opts.map(c => `<option value="${esc(courseKey(c))}">${esc(subjName(c))} (${esc(c.teacher)})</option>`).join('')}</select></div>` : ''; })()}
         ${abiBlock}
         ${exams.length ? `<table><thead><tr><th>Datum</th><th>Zeit</th><th>Fach</th><th>Hinweis</th></tr></thead><tbody>
           ${exams.map(x => { const clash = clashes(x, exams), multi = !x.course.placeholder && sameCourseCount(x, exams) > 1;
@@ -599,6 +791,9 @@ function render() {
     const txt = buildText(s, exams, today);
     el.querySelector('pre.out').textContent = txt;
     el.querySelectorAll('input[type=checkbox]').forEach(cb => cb.addEventListener('change', () => { cb.checked ? s.selected.add(cb.dataset.key) : s.selected.delete(cb.dataset.key); render(); }));
+    const addSel = el.querySelector('select[data-act=add]');
+    if (addSel) addSel.addEventListener('change', () => { const c = addableCourses(s).find(k => courseKey(k) === addSel.value); if (!c) return;
+      s.tt.courses.push(c); s.selected.add(courseKey(c)); render(); });
     el.querySelectorAll('select[data-apf]').forEach(sel => sel.addEventListener('change', () => { s.apf[sel.dataset.apf] = sel.value || null; render(); }));
     el.querySelector('[data-act=remove]').onclick = () => { students.splice(students.indexOf(s), 1); render(); };
     el.querySelector('[data-act=copy]').onclick = async () => {
@@ -640,18 +835,25 @@ function downloadICS(s, exams) {
 }
 
 // ---------- Dateien ----------
+const isPdf = f => /pdf$/i.test(f.type) || /\.pdf$/i.test(f.name);
+const isImage = f => /^image\//i.test(f.type) || /\.(png|jpe?g|heic|heif|webp|gif|bmp|tiff?)$/i.test(f.name);
 async function handleFiles(files) {
   const msg = document.getElementById('loadMsg');
-  if (!files.length) { msg.className = 'msg err'; msg.textContent = 'Bitte eine PDF-Datei auswählen.'; return; }
+  files = files.filter(f => isPdf(f) || isImage(f));
+  if (!files.length) { msg.className = 'msg err'; msg.textContent = 'Bitte eine PDF-Datei oder ein Bild (Screenshot/Foto) des Stundenplans auswählen.'; return; }
   msg.className = 'msg'; msg.textContent = 'Lese Stundenplan …';
   const errors = [];
-  for (const f of files) {
+  for (const [i, f] of files.entries()) {
+    const nr = files.length > 1 ? ` (${i + 1}/${files.length})` : '';
     try {
-      const tt = parseTimetable(await pdfToText(await f.arrayBuffer()));
-      if (!tt.courses.length) { errors.push(`${f.name}: keine Kurse gefunden – ist das ein Untis-Stundenplan?`); continue; }
+      let tt;
+      if (isPdf(f)) { msg.textContent = `Lese Stundenplan${nr} …`; tt = parseTimetable(await pdfToText(await f.arrayBuffer())); }
+      else tt = await imageToTimetable(f, t => { msg.textContent = t + nr; });
+      if (!tt.courses.length) { errors.push(`${f.name}: keine Kurse gefunden – ${tt.fromImage ? 'ist der Stundenplan gut lesbar und vollständig im Bild?' : 'ist das ein Untis-Stundenplan?'}`); continue; }
       const entry = { tt, selected: new Set(tt.courses.map(courseKey)), apf: { 3: null, 4: null } };
       const same = tt.name ? students.findIndex(s => s.tt.name === tt.name && s.tt.jg === tt.jg) : -1;
-      if (same >= 0) students[same] = entry; else students.push(entry);   // gleiche Person nochmal hochgeladen → ersetzen
+      // gleiche Person nochmal hochgeladen → ersetzen (aber ein aus PDF gelesener Plan wird nicht durch ein Bild ersetzt – PDF ist genauer)
+      if (same >= 0) { if (!(tt.fromImage && !students[same].tt.fromImage)) students[same] = entry; } else students.push(entry);
     } catch (err) { errors.push(`${f.name}: ${err.message || err}`); }
   }
   render();
@@ -662,7 +864,7 @@ const drop = document.getElementById('drop');
 document.getElementById('file').addEventListener('change', e => { handleFiles([...e.target.files]); e.target.value = ''; });
 ['dragenter','dragover'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add('over'); }));
 ['dragleave','drop'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove('over'); }));
-drop.addEventListener('drop', e => handleFiles([...e.dataTransfer.files].filter(f => /pdf$/i.test(f.type) || /\.pdf$/i.test(f.name))));
+drop.addEventListener('drop', e => handleFiles([...e.dataTransfer.files]));
 
 // ---------- Von Hand aktualisieren ----------
 document.getElementById('applyPaste').onclick = () => {
@@ -682,7 +884,7 @@ document.getElementById('resetData').onclick = () => {
 };
 
 initData();
-if (new URLSearchParams(location.search).has('debug')) window.__kf = { CONFIG, initData, mergeRanges, parseTimetable, parseCalendarText, parseICS, scrapeMonth, pdfToText, findExams, handleFiles, students, buildText, buildICS, get DATA() { return DATA; } };
+if (new URLSearchParams(location.search).has('debug')) window.__kf = { CONFIG, initData, mergeRanges, parseTimetable, parseCalendarText, parseICS, scrapeMonth, pdfToText, imageToTimetable, coursesFromWords, findExams, handleFiles, students, get lastOcr() { return lastOcr; }, buildText, buildICS, get DATA() { return DATA; } };
 </script>
 </body>
 </html>
